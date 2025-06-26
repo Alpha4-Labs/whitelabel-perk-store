@@ -5,28 +5,7 @@ import { toast } from 'react-hot-toast';
 import { BRAND_CONFIG, shouldDisplayPerk } from '../config/brand';
 import { SUI_CONFIG } from '../config/sui';
 
-// Match the PerkDefinition interface from frontend
-export interface PerkDefinition {
-  id: string;
-  name: string;
-  description: string;
-  creator_partner_cap_id: string;
-  perk_type: string;
-  usdc_price: number;
-  current_alpha_points_price: number;
-  last_price_update_timestamp_ms: number;
-  partner_share_percentage: number;
-  platform_share_percentage: number;
-  max_claims?: number;
-  total_claims_count: number;
-  is_active: boolean;
-  generates_unique_claim_metadata: boolean;
-  max_uses_per_claim?: number;
-  expiration_timestamp_ms?: number;
-  tags?: string[];
-  icon?: string;
-  packageId: string;
-}
+import type { PerkDefinition } from '../types/index';
 
 // Cache configuration
 const CACHE_KEY = 'curated_marketplace_perks';
@@ -117,25 +96,63 @@ export const usePerkMarketplace = () => {
               const revenueSplit = fields.revenue_split_policy?.fields || fields.revenue_split_policy || {};
               
               return {
+                // Core identification (both formats)
                 id: result.data.objectId,
+                objectId: result.data.objectId,
+                
+                // Basic info
                 name: fields.name || 'Unknown Perk',
                 description: fields.description || '',
+                
+                // Creator and type (both formats)
                 creator_partner_cap_id: fields.creator_partner_cap_id,
+                creatorPartnerCapId: fields.creator_partner_cap_id,
                 perk_type: fields.perk_type || 'General',
+                perkType: fields.perk_type || 'General',
+                
+                // Pricing (both formats)
                 usdc_price: parseFloat(fields.usdc_price || '0'),
+                usdcPrice: parseFloat(fields.usdc_price || '0'),
                 current_alpha_points_price: parseFloat(fields.current_alpha_points_price || '0'),
+                currentAlphaPointsPrice: parseFloat(fields.current_alpha_points_price || '0'),
+                
+                // Metadata (both formats)
                 last_price_update_timestamp_ms: parseInt(fields.last_price_update_timestamp_ms || '0'),
+                lastPriceUpdateTimestamp: parseInt(fields.last_price_update_timestamp_ms || '0'),
+                
+                // Claims and limits (both formats)
+                max_claims: fields.max_claims ? parseInt(fields.max_claims) : undefined,
+                maxClaims: fields.max_claims ? parseInt(fields.max_claims) : undefined,
+                total_claims_count: parseInt(fields.total_claims_count || '0'),
+                totalClaimsCount: parseInt(fields.total_claims_count || '0'),
+                
+                // Status and features (both formats)
+                is_active: fields.is_active || false,
+                isActive: fields.is_active || false,
+                generates_unique_claim_metadata: fields.generates_unique_claim_metadata || false,
+                generatesUniqueClaimMetadata: fields.generates_unique_claim_metadata || false,
+                
+                // Usage and expiration (both formats)
+                max_uses_per_claim: fields.max_uses_per_claim ? parseInt(fields.max_uses_per_claim) : undefined,
+                maxUsesPerClaim: fields.max_uses_per_claim ? parseInt(fields.max_uses_per_claim) : undefined,
+                expiration_timestamp_ms: fields.expiration_timestamp_ms ? parseInt(fields.expiration_timestamp_ms) : undefined,
+                expirationTimestamp: fields.expiration_timestamp_ms ? parseInt(fields.expiration_timestamp_ms) : undefined,
+                
+                // Tags and metadata
+                tags: Array.isArray(fields.tags) ? fields.tags : (fields.tags?.length > 0 ? [fields.tags] : []),
+                tag_metadata_id: fields.tag_metadata_id,
+                tagMetadataId: fields.tag_metadata_id,
+                definition_metadata_id: fields.definition_metadata_id,
+                definitionMetadataId: fields.definition_metadata_id,
+                
+                // Additional fields for UI
+                icon: fields.icon,
+                claimCount: parseInt(fields.total_claims_count || '0'),
+                packageId,
+                
+                // Revenue sharing
                 partner_share_percentage: parseInt(revenueSplit.partner_share_percentage || '70'),
                 platform_share_percentage: parseInt(revenueSplit.platform_share_percentage || '30'),
-                max_claims: fields.max_claims ? parseInt(fields.max_claims) : undefined,
-                total_claims_count: parseInt(fields.total_claims_count || '0'),
-                is_active: fields.is_active || false,
-                generates_unique_claim_metadata: fields.generates_unique_claim_metadata || false,
-                max_uses_per_claim: fields.max_uses_per_claim ? parseInt(fields.max_uses_per_claim) : undefined,
-                expiration_timestamp_ms: fields.expiration_timestamp_ms ? parseInt(fields.expiration_timestamp_ms) : undefined,
-                tags: Array.isArray(fields.tags) ? fields.tags : (fields.tags?.length > 0 ? [fields.tags] : []),
-                icon: fields.icon,
-                packageId,
               } as PerkDefinition;
             }
           } catch (err) {
@@ -239,7 +256,45 @@ export const usePerkMarketplace = () => {
     }
   };
 
-  // Fetch user's Alpha Points balance
+  // Helper function to decode u64 values (same as main frontend)
+  const decodeU64 = (bytesInput: Array<number> | Uint8Array | unknown): number => {
+    let bytes: Uint8Array;
+
+    // Convert standard array to Uint8Array if necessary
+    if (Array.isArray(bytesInput) && bytesInput.every(n => typeof n === 'number')) {
+      bytes = new Uint8Array(bytesInput);
+    } else if (bytesInput instanceof Uint8Array) {
+      bytes = bytesInput;
+    } else {
+      console.error('Invalid input type for u64 decoding:', typeof bytesInput);
+      return 0;
+    }
+
+    if (!bytes || bytes.length !== 8) {
+      console.error(`Invalid byte length for u64: expected 8, got ${bytes?.length}`);
+      return 0;
+    }
+    
+    try {
+      const dataView = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const valueBigInt = dataView.getBigUint64(0, true); // true for little-endian
+      
+      const valueNumber = Number(valueBigInt);
+      
+      if (valueBigInt > BigInt(Number.MAX_SAFE_INTEGER)) {
+        console.warn(
+          `Potential precision loss converting u64 value ${valueBigInt} to JavaScript number.`
+        );
+      }
+      
+      return valueNumber;
+    } catch (err) {
+      console.error('Error decoding u64 value:', err);
+      return 0;
+    }
+  };
+
+  // Fetch user's Alpha Points balance from the blockchain
   const fetchUserAlphaPoints = async () => {
     if (!suiClient || !currentAccount?.address) {
       setUserAlphaPoints(0);
@@ -247,11 +302,58 @@ export const usePerkMarketplace = () => {
     }
 
     try {
-      // This would typically query the user's ledger entry
-      // For now, we'll use a placeholder value
-      setUserAlphaPoints(10000); // Placeholder
-    } catch (error) {
-      console.error('Failed to fetch user Alpha Points:', error);
+      console.log('🔍 Fetching Alpha Points balance for:', currentAccount.address);
+      console.log('🔧 Using package:', SUI_CONFIG.packageIds.perkManager);
+      console.log('🔧 Using ledger:', SUI_CONFIG.sharedObjects.ledger);
+      
+      // Use the simpler integration function
+      const { Transaction } = await import('@mysten/sui/transactions');
+      const txb = new Transaction();
+
+      // Try the integration module function
+      txb.moveCall({
+        target: `${SUI_CONFIG.packageIds.perkManager}::integration::get_user_points_balance`,
+        arguments: [
+          txb.object(SUI_CONFIG.sharedObjects.ledger),
+          txb.pure.address(currentAccount.address),
+        ],
+      });
+
+      const inspectResult = await suiClient.devInspectTransactionBlock({
+        sender: currentAccount.address,
+        transactionBlock: txb, 
+      });
+      
+      const status = inspectResult?.effects?.status?.status;
+      if (status !== 'success') {
+        const errorMsg = inspectResult?.effects?.status?.error || 'Unknown devInspect error';
+        console.error('DevInspect execution failed:', errorMsg, inspectResult);
+        throw new Error(`Failed to fetch points: ${errorMsg}`);
+      }
+
+      console.log('📊 DevInspect result:', inspectResult);
+      
+      if (!inspectResult.results || inspectResult.results.length < 1) {
+        console.error('DevInspect results missing or incomplete:', inspectResult);
+        throw new Error('Could not retrieve point balance: Invalid response structure.');
+      }
+      
+      const balanceResult = inspectResult.results[0];
+      if (balanceResult?.returnValues?.[0]) {
+        const [bytes, type] = balanceResult.returnValues[0];
+        if (type === 'u64' && Array.isArray(bytes)) {
+          const totalBalance = decodeU64(bytes);
+          console.log('💰 Found total balance:', totalBalance);
+          setUserAlphaPoints(totalBalance);
+        } else {
+          throw new Error(`Unexpected format for balance. Expected type 'u64' and Array bytes.`);
+        }
+      } else {
+        throw new Error("Could not find balance return value.");
+      }
+      
+    } catch (error: any) {
+      console.error('❌ Failed to fetch user Alpha Points:', error);
       setUserAlphaPoints(0);
     }
   };
@@ -322,6 +424,17 @@ export const usePerkMarketplace = () => {
   useEffect(() => {
     fetchClaimedPerks();
     fetchUserAlphaPoints();
+  }, [currentAccount?.address, suiClient]);
+
+  // Auto-refresh balance every 30 seconds
+  useEffect(() => {
+    if (!currentAccount?.address) return;
+
+    const interval = setInterval(() => {
+      fetchUserAlphaPoints();
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
   }, [currentAccount?.address, suiClient]);
 
   // Apply brand configuration sorting

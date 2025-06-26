@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useCurrentAccount, useConnectWallet, useDisconnectWallet, useWallets } from '@mysten/dapp-kit';
 import { toast, Toaster } from 'react-hot-toast';
 import { CuratedPerkMarketplace } from './CuratedPerkMarketplace';
-import { AlphaPointsBalance } from './AlphaPointsBalance';
 import { PerkDebugHelper } from './PerkDebugHelper';
 import { BRAND_CONFIG, generateCSSVars } from '../config/brand';
 
@@ -95,8 +94,14 @@ export const WhiteLabelApp: React.FC = () => {
               </div>
             </div>
 
-            {/* Wallet Connection */}
+            {/* Network Status & Wallet Connection */}
             <div className="flex items-center space-x-4">
+              {/* Network Status */}
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-success)' }}></div>
+                <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Live on Sui Testnet</span>
+              </div>
+              
               {currentAccount ? (
                 <div className="flex items-center space-x-3">
                   <div className="text-sm">
@@ -238,9 +243,6 @@ export const WhiteLabelApp: React.FC = () => {
         ) : (
           /* Marketplace - Connected */
           <div className="space-y-8">
-            {/* Alpha Points Balance */}
-            <AlphaPointsBalance />
-            
             {/* Curated Marketplace */}
             <CuratedPerkMarketplace />
           </div>

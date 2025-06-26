@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { usePerkMarketplace } from '../hooks/usePerkMarketplace';
-import { PerkDefinition } from '../types';
+import type { PerkDefinition } from '../types/index';
 import { formatPoints } from '../utils/format';
 
 /**
@@ -32,7 +32,7 @@ export const PerkDebugHelper: React.FC = () => {
 
   const copyAllIds = async () => {
     const filteredPerks = getFilteredPerks();
-    const ids = filteredPerks.map(perk => `'${perk.id}'`).join(',\n      ');
+    const ids = filteredPerks.map(perk => `'${perk.objectId}'`).join(',\n      ');
     const configSnippet = `// Generated perk IDs for brand configuration
 export const brandConfig = {
   curation: {
@@ -53,7 +53,7 @@ export const brandConfig = {
       const matchesSearch = !searchTerm || 
         perk.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         perk.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        perk.company?.toLowerCase().includes(searchTerm.toLowerCase());
+        perk.creatorPartnerCapId?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesTags = selectedTags.length === 0 || 
         selectedTags.some(tag => perk.tags?.includes(tag));
@@ -174,11 +174,11 @@ export const brandConfig = {
                 <button
                   onClick={() => {
                     const data = filteredPerks.map(perk => ({
-                      id: perk.id,
+                      id: perk.objectId,
                       name: perk.name,
-                      company: perk.company,
+                      company: perk.creatorPartnerCapId,
                       tags: perk.tags,
-                      price: perk.current_alpha_points_price
+                      price: perk.currentAlphaPointsPrice
                     }));
                     console.table(data);
                     alert('Perk data logged to console! Open DevTools to see the table.');
@@ -196,24 +196,24 @@ export const brandConfig = {
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               {filteredPerks.map(perk => (
                 <div
-                  key={perk.id}
+                  key={perk.objectId}
                   className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-yellow-500 transition-colors"
                 >
                   {/* Perk Header */}
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex-1">
                       <h3 className="text-white font-semibold text-lg mb-1">{perk.name}</h3>
-                      {perk.company && (
-                        <p className="text-gray-400 text-sm">by {perk.company}</p>
+                      {perk.creatorPartnerCapId && (
+                        <p className="text-gray-400 text-sm">by {perk.creatorPartnerCapId.slice(0, 8)}...</p>
                       )}
                     </div>
                     <div className="text-right">
                       <div className="text-yellow-400 font-bold">
-                        {formatPoints(perk.current_alpha_points_price)} αP
+                        {formatPoints(perk.currentAlphaPointsPrice)} αP
                       </div>
-                      {perk.claimCount && (
+                      {perk.totalClaimsCount && (
                         <div className="text-gray-400 text-xs">
-                          {perk.claimCount} claims
+                          {perk.totalClaimsCount} claims
                         </div>
                       )}
                     </div>
@@ -246,18 +246,18 @@ export const brandConfig = {
                       <div>
                         <div className="text-gray-400 text-xs mb-1">Perk ID:</div>
                         <code className="text-green-400 text-sm font-mono break-all">
-                          {perk.id}
+                          {perk.objectId}
                         </code>
                       </div>
                       <button
-                        onClick={() => copyToClipboard(perk.id)}
+                        onClick={() => copyToClipboard(perk.objectId)}
                         className={`ml-3 px-3 py-1 rounded text-sm transition-colors ${
-                          copiedId === perk.id
+                          copiedId === perk.objectId
                             ? 'bg-green-600 text-white'
                             : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                         }`}
                       >
-                        {copiedId === perk.id ? '✓ Copied!' : '📋 Copy'}
+                        {copiedId === perk.objectId ? '✓ Copied!' : '📋 Copy'}
                       </button>
                     </div>
                   </div>

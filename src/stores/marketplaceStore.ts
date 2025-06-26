@@ -10,19 +10,16 @@ export interface FilterState {
   showExpired: boolean;
 }
 
-export interface PerkData {
-  id: string;
-  name: string;
-  description: string;
-  price: number;
-  company: string;
-  tags: string[];
+import type { PerkDefinition } from '../types/index';
+
+export interface PerkData extends PerkDefinition {
+  // Additional store-specific fields
   imageUrl?: string;
   expiresAt?: Date;
-  claimCount: number;
-  maxClaims?: number;
-  requiresMetadata: boolean;
-  createdAt: Date;
+  requiresMetadata?: boolean;
+  createdAt?: Date;
+  price?: number; // Alias for currentAlphaPointsPrice
+  company?: string; // Derived from creator info
 }
 
 export interface UserPreferences {

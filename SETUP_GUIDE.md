@@ -17,7 +17,8 @@ Welcome to the Alpha4 White Label Perk Marketplace! This template allows you to 
    - Customize colors, content, and perk curation
 
 3. **Set Environment Variables**
-   - Copy `.env.example` to `.env`
+   - Copy `env.template` to `.env.local`
+   - ⚠️ **CRITICAL**: Replace shared object IDs with actual deployed contract IDs
    - Configure your Sui network and contract details
 
 4. **Run Development Server**
@@ -185,6 +186,14 @@ VITE_SUI_NETWORK=testnet
 VITE_SUI_RPC_URL=https://fullnode.testnet.sui.io
 VITE_PERK_MANAGER_PACKAGE_ID=0xf933e69aeeeebb9d1fc50b6324070d8f2bdc2595162b0616142a509c90e3cd16
 
+# ⚠️ CRITICAL: Shared Object IDs (Required for Alpha Points Balance)
+# These MUST be replaced with actual deployed contract object IDs
+# Contact Alpha4 support for testnet/mainnet object IDs
+VITE_CONFIG_ID=0x... # Replace with actual Config object ID
+VITE_LEDGER_ID=0x... # Replace with actual Ledger object ID  
+VITE_STAKING_MANAGER_ID=0x... # Replace with actual StakingManager object ID
+VITE_ORACLE_ID=0x... # Replace with actual Oracle object ID
+
 # Optional: Discord Integration
 VITE_DISCORD_CLIENT_ID=your_discord_client_id
 VITE_DISCORD_REDIRECT_URI=http://localhost:5173
@@ -319,7 +328,12 @@ npm run preview  # Test the build locally
    - Check network configuration matches your wallet
    - Try refreshing the page
 
-3. **"Styling looks wrong"**
+3. **"Alpha Points balance shows 0 or error"**
+   - Make sure all shared object IDs are configured (VITE_CONFIG_ID, VITE_LEDGER_ID, etc.)
+   - Verify the package ID matches your deployed contracts
+   - Check that your wallet is connected to the same network
+
+4. **"Styling looks wrong"**
    - Check that your CSS custom properties are valid
    - Verify brand configuration is properly exported
    - Clear browser cache

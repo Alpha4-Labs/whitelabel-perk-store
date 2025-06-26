@@ -1,315 +1,397 @@
-import React, { useState, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { XMarkIcon, MagnifyingGlassIcon, FunnelIcon, AdjustmentsHorizontalIcon } from '@heroicons/react/24/outline';
-import { Button } from './ui/Button';
+import React from 'react';
+import { BRAND_CONFIG } from '../config/brand';
 
 interface PerkFilterModalProps {
   isOpen: boolean;
   onClose: () => void;
-  filters: {
-    search: string;
-    tags: Set<string>;
-    priceRange: [number, number];
-    sortBy: 'alphabetical' | 'price-low' | 'price-high' | 'claims' | 'newest';
-    showExpired: boolean;
-  };
-  onFiltersChange: (filters: any) => void;
-  availableTags: string[];
+  allTags: string[];
+  allCompanies: string[];
+  allCategories: string[];
+  activeTags: Set<string>;
+  activeCompanies: Set<string>;
+  activeCategories: Set<string>;
+  setActiveTags: (tags: Set<string>) => void;
+  setActiveCompanies: (companies: Set<string>) => void;
+  setActiveCategories: (categories: Set<string>) => void;
+  sortBy: 'alphabetical' | 'date' | 'price-low' | 'price-high' | 'owned' | 'claims';
+  setSortBy: (sort: 'alphabetical' | 'date' | 'price-low' | 'price-high' | 'owned' | 'claims') => void;
+  filterByOwned: 'all' | 'owned' | 'not-owned';
+  setFilterByOwned: (filter: 'all' | 'owned' | 'not-owned') => void;
+  priceRange: [number, number];
+  setPriceRange: (range: [number, number]) => void;
+  showExpired: boolean;
+  setShowExpired: (show: boolean) => void;
+  modalTitle: string;
   totalPerks: number;
-  filteredPerks: number;
+  displayedPerks: number;
 }
 
 export const PerkFilterModal: React.FC<PerkFilterModalProps> = ({
   isOpen,
   onClose,
-  filters,
-  onFiltersChange,
-  availableTags,
+  allTags,
+  allCompanies,
+  allCategories,
+  activeTags,
+  activeCompanies,
+  activeCategories,
+  setActiveTags,
+  setActiveCompanies,
+  setActiveCategories,
+  sortBy,
+  setSortBy,
+  filterByOwned,
+  setFilterByOwned,
+  priceRange,
+  setPriceRange,
+  showExpired,
+  setShowExpired,
+  modalTitle,
   totalPerks,
-  filteredPerks,
+  displayedPerks,
 }) => {
-  const [activeTab, setActiveTab] = useState<'search' | 'tags' | 'price' | 'sort'>('search');
-  const [localSearch, setLocalSearch] = useState(filters.search);
-
-  const tabs = [
-    { id: 'search', label: 'Search', icon: MagnifyingGlassIcon },
-    { id: 'tags', label: 'Tags', icon: FunnelIcon },
-    { id: 'price', label: 'Price', icon: AdjustmentsHorizontalIcon },
-    { id: 'sort', label: 'Sort', icon: AdjustmentsHorizontalIcon },
-  ];
+  if (!isOpen) return null;
 
   const handleTagToggle = (tag: string) => {
-    const newTags = new Set(filters.tags);
+    const newTags = new Set(activeTags);
     if (newTags.has(tag)) {
       newTags.delete(tag);
     } else {
       newTags.add(tag);
     }
-    onFiltersChange({ ...filters, tags: newTags });
+    setActiveTags(newTags);
   };
 
-  const handleClearAll = () => {
-    onFiltersChange({
-      search: '',
-      tags: new Set(),
-      priceRange: [0, 1000000] as [number, number],
-      sortBy: 'newest',
-      showExpired: true,
-    });
-    setLocalSearch('');
+  const handleCompanyToggle = (company: string) => {
+    const newCompanies = new Set(activeCompanies);
+    if (newCompanies.has(company)) {
+      newCompanies.delete(company);
+    } else {
+      newCompanies.add(company);
+    }
+    setActiveCompanies(newCompanies);
   };
 
-  const activeFiltersCount = useMemo(() => {
-    let count = 0;
-    if (filters.search) count++;
-    if (filters.tags.size > 0) count++;
-    if (filters.priceRange[0] > 0 || filters.priceRange[1] < 1000000) count++;
-    if (!filters.showExpired) count++;
-    return count;
-  }, [filters]);
+  const handleCategoryToggle = (category: string) => {
+    const newCategories = new Set(activeCategories);
+    if (newCategories.has(category)) {
+      newCategories.delete(category);
+    } else {
+      newCategories.add(category);
+    }
+    setActiveCategories(newCategories);
+  };
+
+  const clearAllFilters = () => {
+    setActiveTags(new Set());
+    setActiveCompanies(new Set());
+    setActiveCategories(new Set());
+    setFilterByOwned('all');
+    setPriceRange([0, 10000000]);
+    setShowExpired(true);
+    setSortBy('date');
+  };
 
   return (
-    <AnimatePresence>
-      {isOpen && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4"
-          onClick={onClose}
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div 
+        className="max-w-4xl w-full max-h-[90vh] overflow-y-auto rounded-2xl shadow-2xl border"
+        style={{
+          backgroundColor: 'var(--color-background-card)',
+          borderColor: 'var(--color-border)',
+        }}
+      >
+        {/* Header */}
+        <div 
+          className="flex items-center justify-between p-6 border-b"
+          style={{ borderColor: 'var(--color-border)' }}
         >
-          <motion.div
-            initial={{ scale: 0.95, opacity: 0, y: 20 }}
-            animate={{ scale: 1, opacity: 1, y: 0 }}
-            exit={{ scale: 0.95, opacity: 0, y: 20 }}
-            transition={{ type: "spring", duration: 0.3 }}
-            className="bg-[var(--color-background-card)]/95 backdrop-blur-lg border border-[var(--color-border)] rounded-2xl shadow-2xl p-6 w-full max-w-2xl max-h-[80vh] flex flex-col"
-            onClick={(e) => e.stopPropagation()}
+          <div>
+            <h2 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
+              {modalTitle}
+            </h2>
+            <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
+              Showing {displayedPerks} of {totalPerks} perks
+            </p>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-2 rounded-lg transition-colors hover:bg-opacity-80"
+            style={{ backgroundColor: 'var(--color-background)' }}
           >
-            {/* Header */}
-            <div className="flex justify-between items-center mb-6">
-              <div>
-                <h2 className="text-xl font-bold text-[var(--color-text)] flex items-center gap-2">
-                  <FunnelIcon className="w-6 h-6 text-[var(--color-primary)]" />
-                  Filter Perks
-                </h2>
-                <div className="text-sm text-[var(--color-text-muted)] mt-1">
-                  Showing {filteredPerks} of {totalPerks} perks
-                  {activeFiltersCount > 0 && (
-                    <span className="ml-2 text-[var(--color-primary)]">
-                      • {activeFiltersCount} filter{activeFiltersCount !== 1 ? 's' : ''} active
-                    </span>
-                  )}
+            <svg className="w-6 h-6" style={{ color: 'var(--color-text)' }} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="p-6 space-y-6">
+          {/* Sort Options */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+              🔀 Sort By
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
+              {[
+                { value: 'date', label: '🕒 Newest First' },
+                { value: 'alphabetical', label: '🔤 A-Z' },
+                { value: 'price-low', label: '💰 Price: Low to High' },
+                { value: 'price-high', label: '💰 Price: High to Low' },
+                { value: 'owned', label: '⭐ Owned First' },
+                { value: 'claims', label: '🔥 Most Popular' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setSortBy(option.value as any)}
+                  className={`p-3 rounded-lg text-sm font-medium transition-all ${
+                    sortBy === option.value ? 'ring-2 ring-opacity-50' : ''
+                  }`}
+                                     style={{
+                     backgroundColor: sortBy === option.value 
+                       ? 'var(--color-primary)' 
+                       : 'var(--color-background)',
+                     color: sortBy === option.value 
+                       ? 'var(--color-text)' 
+                       : 'var(--color-text-muted)',
+                     borderColor: 'var(--color-border)',
+                   } as React.CSSProperties}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Ownership Filter */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+              👤 Ownership Status
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              {[
+                { value: 'all', label: 'All Perks' },
+                { value: 'owned', label: '✅ Owned' },
+                { value: 'not-owned', label: '🆕 Not Owned' },
+              ].map((option) => (
+                <button
+                  key={option.value}
+                  onClick={() => setFilterByOwned(option.value as any)}
+                  className={`p-3 rounded-lg text-sm font-medium transition-all ${
+                    filterByOwned === option.value ? 'ring-2 ring-opacity-50' : ''
+                  }`}
+                  style={{
+                    backgroundColor: filterByOwned === option.value 
+                      ? 'var(--color-primary)' 
+                      : 'var(--color-background)',
+                    color: filterByOwned === option.value 
+                      ? 'var(--color-text)' 
+                      : 'var(--color-text-muted)',
+                    borderColor: 'var(--color-border)',
+                  }}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Price Range */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+              💰 Price Range (Alpha Points)
+            </h3>
+            <div className="space-y-3">
+              <div className="flex items-center space-x-4">
+                <div className="flex-1">
+                  <label className="block text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                    Min Price
+                  </label>
+                  <input
+                    type="number"
+                    value={priceRange[0]}
+                    onChange={(e) => setPriceRange([parseInt(e.target.value) || 0, priceRange[1]])}
+                    className="w-full p-2 rounded-lg border"
+                    style={{
+                      backgroundColor: 'var(--color-background)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="flex-1">
+                  <label className="block text-sm mb-1" style={{ color: 'var(--color-text-muted)' }}>
+                    Max Price
+                  </label>
+                  <input
+                    type="number"
+                    value={priceRange[1]}
+                    onChange={(e) => setPriceRange([priceRange[0], parseInt(e.target.value) || 10000000])}
+                    className="w-full p-2 rounded-lg border"
+                    style={{
+                      backgroundColor: 'var(--color-background)',
+                      borderColor: 'var(--color-border)',
+                      color: 'var(--color-text)',
+                    }}
+                    placeholder="10000000"
+                  />
                 </div>
               </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={onClose}
-                className="text-[var(--color-text-muted)] hover:text-[var(--color-text)]"
-              >
-                <XMarkIcon className="w-6 h-6" />
-              </Button>
+              <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                Current range: {priceRange[0].toLocaleString()} - {priceRange[1].toLocaleString()} αP
+              </div>
             </div>
+          </div>
 
-            {/* Tabs */}
-            <div className="flex gap-1 mb-6 bg-[var(--color-background)]/50 p-1 rounded-xl">
-              {tabs.map((tab) => {
-                const Icon = tab.icon;
-                return (
+          {/* Categories Filter */}
+          {allCategories.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+                📁 Categories ({activeCategories.size} selected)
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {allCategories.map((category) => (
                   <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id as any)}
-                    className={`flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg transition-all duration-200 text-sm font-medium relative ${
-                      activeTab === tab.id
-                        ? 'text-[var(--color-primary)] bg-[var(--color-background-card)] shadow-sm'
-                        : 'text-[var(--color-text-muted)] hover:text-[var(--color-text)]'
+                    key={category}
+                    onClick={() => handleCategoryToggle(category)}
+                    className={`p-2 rounded-lg text-sm transition-all ${
+                      activeCategories.has(category) ? 'ring-2 ring-opacity-50' : ''
                     }`}
+                    style={{
+                      backgroundColor: activeCategories.has(category) 
+                        ? 'var(--color-secondary)' 
+                        : 'var(--color-background)',
+                      color: activeCategories.has(category) 
+                        ? 'var(--color-text)' 
+                        : 'var(--color-text-muted)',
+                      borderColor: 'var(--color-border)',
+                    }}
                   >
-                    <Icon className="w-4 h-4" />
-                    {tab.label}
-                    {activeTab === tab.id && (
-                      <motion.div
-                        layoutId="activeTab"
-                        className="absolute inset-0 bg-[var(--color-primary)]/10 rounded-lg"
-                        transition={{ type: "spring", duration: 0.3 }}
-                      />
-                    )}
+                    {category}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
+          )}
 
-            {/* Content */}
-            <div className="flex-1 overflow-y-auto">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeTab}
-                  initial={{ opacity: 0, x: 20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -20 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {activeTab === 'search' && (
-                    <div className="space-y-4">
-                      <div className="relative">
-                        <MagnifyingGlassIcon className="absolute left-3 top-3 w-5 h-5 text-[var(--color-text-muted)]" />
-                        <input
-                          type="text"
-                          placeholder="Search perks by name, description, or company..."
-                          value={localSearch}
-                          onChange={(e) => setLocalSearch(e.target.value)}
-                          className="w-full bg-[var(--color-background)]/50 border border-[var(--color-border)] rounded-xl pl-10 pr-4 py-3 text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20 transition-colors"
-                        />
-                      </div>
-                      <Button
-                        onClick={() => onFiltersChange({ ...filters, search: localSearch })}
-                        className="w-full"
-                        disabled={localSearch === filters.search}
-                      >
-                        Apply Search
-                      </Button>
-                    </div>
-                  )}
-
-                  {activeTab === 'tags' && (
-                    <div className="space-y-4">
-                      <div className="flex justify-between items-center">
-                        <p className="text-sm text-[var(--color-text-muted)]">
-                          Select tags to filter perks
-                        </p>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => onFiltersChange({ ...filters, tags: new Set() })}
-                          disabled={filters.tags.size === 0}
-                        >
-                          Clear All
-                        </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto">
-                        {availableTags.map((tag) => (
-                          <motion.button
-                            key={tag}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleTagToggle(tag)}
-                            className={`p-3 rounded-lg border transition-all duration-200 text-sm font-medium text-left ${
-                              filters.tags.has(tag)
-                                ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
-                                : 'bg-[var(--color-background)]/50 border-[var(--color-border)] text-[var(--color-text-muted)] hover:border-[var(--color-primary)]/50'
-                            }`}
-                          >
-                            {tag}
-                          </motion.button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {activeTab === 'price' && (
-                    <div className="space-y-4">
-                      <div>
-                        <label className="block text-sm font-medium text-[var(--color-text)] mb-2">
-                          Price Range (Alpha Points)
-                        </label>
-                        <div className="grid grid-cols-2 gap-4">
-                          <div>
-                            <label className="block text-xs text-[var(--color-text-muted)] mb-1">Min</label>
-                            <input
-                              type="number"
-                              value={filters.priceRange[0]}
-                              onChange={(e) => onFiltersChange({
-                                ...filters,
-                                priceRange: [Number(e.target.value), filters.priceRange[1]]
-                              })}
-                              className="w-full bg-[var(--color-background)]/50 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text)]"
-                              min="0"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-xs text-[var(--color-text-muted)] mb-1">Max</label>
-                            <input
-                              type="number"
-                              value={filters.priceRange[1]}
-                              onChange={(e) => onFiltersChange({
-                                ...filters,
-                                priceRange: [filters.priceRange[0], Number(e.target.value)]
-                              })}
-                              className="w-full bg-[var(--color-background)]/50 border border-[var(--color-border)] rounded-lg px-3 py-2 text-[var(--color-text)]"
-                              min="0"
-                            />
-                          </div>
-                        </div>
-                      </div>
-                      
-                      <div className="flex items-center justify-between p-3 bg-[var(--color-background)]/50 rounded-lg">
-                        <span className="text-sm text-[var(--color-text)]">Show expired perks</span>
-                        <button
-                          onClick={() => onFiltersChange({ ...filters, showExpired: !filters.showExpired })}
-                          className={`relative w-12 h-6 rounded-full transition-colors duration-200 ${
-                            filters.showExpired ? 'bg-[var(--color-primary)]' : 'bg-[var(--color-border)]'
-                          }`}
-                        >
-                          <motion.div
-                            animate={{ x: filters.showExpired ? 24 : 0 }}
-                            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                            className="absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow-sm"
-                          />
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
-                  {activeTab === 'sort' && (
-                    <div className="space-y-2">
-                      {[
-                        { value: 'newest', label: 'Newest First' },
-                        { value: 'alphabetical', label: 'Alphabetical' },
-                        { value: 'price-low', label: 'Price: Low to High' },
-                        { value: 'price-high', label: 'Price: High to Low' },
-                        { value: 'claims', label: 'Most Popular' },
-                      ].map((option) => (
-                        <motion.button
-                          key={option.value}
-                          whileHover={{ scale: 1.01 }}
-                          whileTap={{ scale: 0.99 }}
-                          onClick={() => onFiltersChange({ ...filters, sortBy: option.value as any })}
-                          className={`w-full p-3 rounded-lg border transition-all duration-200 text-left ${
-                            filters.sortBy === option.value
-                              ? 'bg-[var(--color-primary)]/10 border-[var(--color-primary)] text-[var(--color-primary)]'
-                              : 'bg-[var(--color-background)]/50 border-[var(--color-border)] text-[var(--color-text)] hover:border-[var(--color-primary)]/50'
-                          }`}
-                        >
-                          {option.label}
-                        </motion.button>
-                      ))}
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
+          {/* Tags Filter */}
+          {allTags.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+                🏷️ Tags ({activeTags.size} selected)
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                {allTags.map((tag) => (
+                  <button
+                    key={tag}
+                    onClick={() => handleTagToggle(tag)}
+                    className={`p-2 rounded-lg text-sm transition-all ${
+                      activeTags.has(tag) ? 'ring-2 ring-opacity-50' : ''
+                    }`}
+                    style={{
+                      backgroundColor: activeTags.has(tag) 
+                        ? 'var(--color-primary)' 
+                        : 'var(--color-background)',
+                      color: activeTags.has(tag) 
+                        ? 'var(--color-text)' 
+                        : 'var(--color-text-muted)',
+                      borderColor: 'var(--color-border)',
+                    }}
+                  >
+                    {tag}
+                  </button>
+                ))}
+              </div>
             </div>
+          )}
 
-            {/* Footer */}
-            <div className="flex gap-3 mt-6 pt-4 border-t border-[var(--color-border)]">
-              <Button
-                variant="secondary"
-                onClick={handleClearAll}
-                disabled={activeFiltersCount === 0}
-                className="flex-1"
-              >
-                Clear All Filters
-              </Button>
-              <Button
-                onClick={onClose}
-                className="flex-1"
-              >
-                Apply Filters
-              </Button>
+          {/* Companies Filter */}
+          {BRAND_CONFIG.features.showPartnerNames && allCompanies.length > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+                🏢 Companies ({activeCompanies.size} selected)
+              </h3>
+              <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                {allCompanies.map((company) => (
+                  <button
+                    key={company}
+                    onClick={() => handleCompanyToggle(company)}
+                    className={`p-2 rounded-lg text-sm transition-all ${
+                      activeCompanies.has(company) ? 'ring-2 ring-opacity-50' : ''
+                    }`}
+                    style={{
+                      backgroundColor: activeCompanies.has(company) 
+                        ? 'var(--color-success)' 
+                        : 'var(--color-background)',
+                      color: activeCompanies.has(company) 
+                        ? 'var(--color-text)' 
+                        : 'var(--color-text-muted)',
+                      borderColor: 'var(--color-border)',
+                    }}
+                  >
+                    {company}
+                  </button>
+                ))}
+              </div>
             </div>
-          </motion.div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+          )}
+
+          {/* Additional Options */}
+          <div>
+            <h3 className="text-lg font-semibold mb-3" style={{ color: 'var(--color-text)' }}>
+              ⚙️ Additional Options
+            </h3>
+            <div className="space-y-3">
+              <label className="flex items-center space-x-3">
+                <input
+                  type="checkbox"
+                  checked={showExpired}
+                  onChange={(e) => setShowExpired(e.target.checked)}
+                  className="w-4 h-4 rounded"
+                  style={{ accentColor: 'var(--color-primary)' }}
+                />
+                <span style={{ color: 'var(--color-text)' }}>
+                  Show expired perks
+                </span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div 
+          className="flex items-center justify-between p-6 border-t"
+          style={{ borderColor: 'var(--color-border)' }}
+        >
+          <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+            {displayedPerks} of {totalPerks} perks shown
+          </div>
+          <div className="flex space-x-3">
+            <button
+              onClick={clearAllFilters}
+              className="px-4 py-2 rounded-lg font-medium transition-colors border"
+              style={{
+                backgroundColor: 'var(--color-background)',
+                borderColor: 'var(--color-border)',
+                color: 'var(--color-text)',
+              }}
+            >
+              Clear All
+            </button>
+            <button
+              onClick={onClose}
+              className="px-6 py-2 rounded-lg font-medium transition-colors"
+              style={{
+                backgroundColor: 'var(--color-primary)',
+                color: 'var(--color-text)',
+              }}
+            >
+              Apply Filters
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }; 

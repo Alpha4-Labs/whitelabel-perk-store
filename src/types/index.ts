@@ -23,39 +23,85 @@ export interface ClaimedPerk {
   perkDefinitionId: string; // Links to the PerkDefinition
   owner: string; // User's address
   claimTimestamp: number; // When it was claimed (ms)
-  status: 'ACTIVE' | 'FULLY_CONSUMED' | 'EXPIRED'; // Current status
+  status: 'ACTIVE' | 'FULLY_CONSUMED' | 'EXPIRED' | 'Active' | 'Used' | 'Expired'; // Current status (both formats)
   claimSpecificMetadataId?: string; // Optional metadata object ID
   remainingUses?: number; // For consumable perks
   
   // Derived/fetched data from PerkDefinition
   name: string;
   description: string;
-  icon: string; // We'll derive this from perk_type or metadata
+  icon?: string; // We'll derive this from perk_type or metadata
   perkType: string;
   usdcPrice: number;
   currentAlphaPointsPrice: number;
   tags: string[];
+  
+  // Additional fields for service compatibility
+  category?: string; // Alias for perkType
+  value?: number; // Alias for usdcPrice
+  claimedAt?: string; // Formatted timestamp
 }
 
-// Structure that matches the smart contract PerkDefinition
+// Unified PerkDefinition interface that works across the entire app
 export interface PerkDefinition {
+  // Core identification
+  id: string; // Also available as objectId for compatibility
   objectId: string;
+  
+  // Basic info
   name: string;
   description: string;
-  creatorPartnerCapId: string;
-  perkType: string;
-  usdcPrice: number;
-  currentAlphaPointsPrice: number;
-  lastPriceUpdateTimestamp: number;
-  maxClaims?: number;
-  totalClaimsCount: number;
-  isActive: boolean;
-  definitionMetadataId: string;
-  generatesUniqueClaimMetadata: boolean;
-  maxUsesPerClaim?: number;
-  expirationTimestamp?: number;
+  
+  // Creator and type
+  creator_partner_cap_id: string; // snake_case for API compatibility
+  creatorPartnerCapId: string; // camelCase for UI compatibility
+  perk_type: string; // snake_case for API compatibility
+  perkType: string; // camelCase for UI compatibility
+  
+  // Pricing
+  usdc_price: number; // snake_case for API compatibility
+  usdcPrice: number; // camelCase for UI compatibility
+  current_alpha_points_price: number; // snake_case for API compatibility
+  currentAlphaPointsPrice: number; // camelCase for UI compatibility
+  
+  // Metadata
+  last_price_update_timestamp_ms?: number; // snake_case for API compatibility
+  lastPriceUpdateTimestamp?: number; // camelCase for UI compatibility
+  
+  // Claims and limits
+  max_claims?: number; // snake_case for API compatibility
+  maxClaims?: number; // camelCase for UI compatibility
+  total_claims_count: number; // snake_case for API compatibility
+  totalClaimsCount: number; // camelCase for UI compatibility
+  
+  // Status and features
+  is_active: boolean; // snake_case for API compatibility
+  isActive: boolean; // camelCase for UI compatibility
+  generates_unique_claim_metadata?: boolean; // snake_case for API compatibility
+  generatesUniqueClaimMetadata?: boolean; // camelCase for UI compatibility
+  
+  // Usage and expiration
+  max_uses_per_claim?: number; // snake_case for API compatibility
+  maxUsesPerClaim?: number; // camelCase for UI compatibility
+  expiration_timestamp_ms?: number; // snake_case for API compatibility
+  expirationTimestamp?: number; // camelCase for UI compatibility
+  
+  // Tags and metadata
   tags: string[];
-  tagMetadataId: string;
+  tag_metadata_id?: string; // snake_case for API compatibility
+  tagMetadataId?: string; // camelCase for UI compatibility
+  definition_metadata_id?: string; // snake_case for API compatibility
+  definitionMetadataId?: string; // camelCase for UI compatibility
+  
+  // Additional fields for UI
+  icon?: string;
+  company?: string; // Derived from creatorPartnerCapId
+  claimCount?: number; // Alias for totalClaimsCount
+  packageId?: string;
+  
+  // Revenue sharing (optional)
+  partner_share_percentage?: number;
+  platform_share_percentage?: number;
 }
 
 // For Alpha4's own reward offerings

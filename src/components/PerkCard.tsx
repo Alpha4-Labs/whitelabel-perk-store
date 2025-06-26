@@ -13,7 +13,7 @@ import {
 import { HeartIcon as HeartSolid } from '@heroicons/react/24/solid';
 import { Button } from './ui/Button';
 import { useMarketplaceStore } from '../stores/marketplaceStore';
-import { PerkData } from '../stores/marketplaceStore';
+import type { PerkData } from '../stores/marketplaceStore';
 import { brandConfig } from '../config/brand';
 
 interface PerkCardProps {
@@ -45,8 +45,12 @@ export const PerkCard: React.FC<PerkCardProps> = ({
   const isClaimed = claimedPerks.has(perk.id);
   const canAfford = canAffordPerk(perk.id);
   const isExpired = perk.expiresAt && perk.expiresAt < new Date();
-  const claimPercentage = perk.maxClaims ? (perk.claimCount / perk.maxClaims) * 100 : 0;
-  const isLowStock = perk.maxClaims && (perk.maxClaims - perk.claimCount) <= 5;
+  
+  // Handle both camelCase and snake_case formats
+  const maxClaims = perk.maxClaims || perk.max_claims;
+  const claimCount = perk.claimCount || perk.totalClaimsCount || perk.total_claims_count || 0;
+  const claimPercentage = maxClaims ? (claimCount / maxClaims) * 100 : 0;
+  const isLowStock = maxClaims && (maxClaims - claimCount) <= 5;
   
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat().format(price);
