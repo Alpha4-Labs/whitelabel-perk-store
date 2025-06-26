@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { useCurrentAccount, useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { toast } from 'react-hot-toast';
-import { usePerkMarketplace, PerkDefinition } from '../hooks/usePerkMarketplace';
+import { usePerkMarketplace, type PerkDefinition } from '../hooks/usePerkMarketplace';
 import { BRAND_CONFIG } from '../config/brand';
 import { SUI_CONFIG } from '../config/sui';
-
 import { buildClaimPerkQuotaFreeTransaction } from '../utils/transactions';
+
+// Export the PerkDefinition type for use in other components
+export type { PerkDefinition };
 
 interface CuratedPerkMarketplaceProps {
   className?: string;
@@ -83,7 +85,6 @@ export const CuratedPerkMarketplace: React.FC<CuratedPerkMarketplaceProps> = ({
 
       const result = await signAndExecute({
         transaction,
-        chain: `sui:${SUI_CONFIG.network}`,
       });
 
       if (result?.digest) {

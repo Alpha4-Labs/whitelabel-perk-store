@@ -79,4 +79,106 @@ export interface SuiObjectResponse {
     type: string;
     fields: Record<string, any>;
   };
+}
+
+// Brand configuration interface for white-label customization
+export interface BrandConfig {
+  company: {
+    name: string;
+    tagline?: string;
+    logo?: string;
+    website?: string;
+    supportEmail?: string;
+  };
+  theme: {
+    colors: {
+      primary: string;
+      secondary: string;
+      background: string;
+      backgroundCard: string;
+      text: string;
+      textMuted: string;
+      border: string;
+      success: string;
+      warning: string;
+      error: string;
+    };
+    fonts: {
+      primary: string;
+      secondary: string;
+    };
+    borderRadius: string;
+  };
+  curation: {
+    method: 'perk_ids' | 'partner_ids' | 'tags';
+    perkIds?: string[];
+    allowedPartnerIds?: string[];
+    requiredTags?: string[];
+    excludedTags?: string[];
+  };
+  sorting?: {
+    defaultSort?: string;
+    customSorts?: Record<string, (perks: any[]) => any[]>;
+    availableOptions?: Array<{ value: string; label: string }>;
+  };
+  filtering?: {
+    enabledFilters?: string[];
+    customFilters?: Record<string, {
+      label: string;
+      options: Array<{ value: string; label: string }>;
+      filterFn: (perks: any[], value: string) => any[];
+    }>;
+  };
+  features: {
+    showDiscordIntegration: boolean;
+    showUSDPricing: boolean;
+    showClaimCounts: boolean;
+    showPartnerNames: boolean;
+    enableFiltering: boolean;
+    showExpiredPerks: boolean;
+    autoRefresh: boolean;
+    refreshInterval: number;
+    showLastUpdated: boolean;
+  };
+  content: {
+    welcomeTitle?: string;
+    welcomeMessage?: string;
+    emptyStateTitle?: string;
+    emptyStateMessage?: string;
+    footerText?: string;
+    purchaseButtonText?: string;
+    connectWalletText?: string;
+  };
+  social?: {
+    website?: string;
+    twitter?: string;
+    discord?: string;
+    telegram?: string;
+    email?: string;
+  };
+  analytics?: {
+    enableTracking: boolean;
+    trackPerkViews: boolean;
+    trackPurchases: boolean;
+    trackFilterUsage: boolean;
+    customEvents?: Record<string, any>;
+  };
+  advanced?: {
+    balanceBasedCuration?: {
+      enabled: boolean;
+      tiers: Array<{
+        minBalance: number;
+        maxBalance: number;
+        additionalTags: string[];
+      }>;
+    };
+    featuredPerks?: {
+      enabled: boolean;
+      maxCount: number;
+      criteria: {
+        tags: string[];
+        minClaimCount: number;
+      };
+    };
+  };
 } 

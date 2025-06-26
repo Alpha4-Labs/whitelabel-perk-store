@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
-import { useCurrentAccount, useConnectWallet, useDisconnectWallet } from '@mysten/dapp-kit';
+import { useCurrentAccount, useConnectWallet, useDisconnectWallet, useWallets } from '@mysten/dapp-kit';
 import { toast, Toaster } from 'react-hot-toast';
 import { CuratedPerkMarketplace } from './CuratedPerkMarketplace';
+import { AlphaPointsBalance } from './AlphaPointsBalance';
+import { PerkDebugHelper } from './PerkDebugHelper';
 import { BRAND_CONFIG, generateCSSVars } from '../config/brand';
 
 export const WhiteLabelApp: React.FC = () => {
   const currentAccount = useCurrentAccount();
   const { mutate: connectWallet } = useConnectWallet();
   const { mutate: disconnectWallet } = useDisconnectWallet();
+  const wallets = useWallets();
 
   // Apply brand CSS variables
   useEffect(() => {
@@ -26,8 +29,18 @@ export const WhiteLabelApp: React.FC = () => {
   }, []);
 
   const handleConnectWallet = () => {
+    // Find the first available wallet or default to Sui Wallet
+    const availableWallet = wallets.find(wallet => 
+      wallet.name.toLowerCase().includes('sui')
+    ) || wallets[0];
+    
+    if (!availableWallet) {
+      toast.error("No Sui wallets found. Please install a Sui wallet.");
+      return;
+    }
+    
     connectWallet(
-      { walletName: "Sui Wallet" },
+      { wallet: availableWallet },
       {
         onSuccess: () => {
           toast.success("Wallet connected successfully!");
@@ -224,7 +237,13 @@ export const WhiteLabelApp: React.FC = () => {
           </div>
         ) : (
           /* Marketplace - Connected */
-          <CuratedPerkMarketplace />
+          <div className="space-y-8">
+            {/* Alpha Points Balance */}
+            <AlphaPointsBalance />
+            
+            {/* Curated Marketplace */}
+            <CuratedPerkMarketplace />
+          </div>
         )}
       </main>
 
@@ -302,6 +321,9 @@ export const WhiteLabelApp: React.FC = () => {
           },
         }}
       />
+
+      {/* Debug Helper - Only shows when VITE_DEBUG_MODE=true */}
+      <PerkDebugHelper />
     </div>
   );
 }; 
