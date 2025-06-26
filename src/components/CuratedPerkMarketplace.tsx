@@ -26,6 +26,7 @@ export const CuratedPerkMarketplace: React.FC<CuratedPerkMarketplaceProps> = ({
     isLoading,
     error,
     partnerNames,
+    claimedPerks,
     userAlphaPoints,
     refresh,
     hasPerkClaimed,
@@ -557,9 +558,8 @@ export const CuratedPerkMarketplace: React.FC<CuratedPerkMarketplaceProps> = ({
                   borderColor: isPerkClaimed 
                     ? 'var(--color-success)' 
                     : 'var(--color-border)',
-                  '--tw-ring-color': isPerkClaimed ? 'var(--color-success)' : 'transparent',
                   animationDelay: `${index * 50}ms`,
-                }}
+                } as React.CSSProperties}
               >
                 <div className="flex items-start space-x-4">
                   {/* Perk Icon */}

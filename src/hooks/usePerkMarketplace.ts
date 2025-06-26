@@ -59,31 +59,55 @@ export const usePerkMarketplace = () => {
     if (!suiClient) return [];
     
     try {
-      const packageId = SUI_CONFIG.packageIds.perkManager;
+      // Use all known package IDs like the main frontend does
+      const ALL_PACKAGE_IDS = [
+        SUI_CONFIG.packageIds.perkManager, // Current package
+        '0xf933e69aeeeebb9d1fc50b6324070d8f2bdc2595162b0616142a509c90e3cd16', // Known package with perks
+        '0xfd761a2a5979db53f7f3176c0778695f6abafbb7c0eec8ce03136ae10dc2b47d', // Another known package
+      ].filter(Boolean);
       
-      // Query for PerkDefinitionCreated events
-      const perkCreatedEvents = await suiClient.queryEvents({
-        query: {
-          MoveEventType: `${packageId}::perk_manager::PerkDefinitionCreated`
-        },
-        order: 'descending',
-        limit: 50, // Reasonable limit for curated marketplaces
-      });
+      console.log('🔍 Fetching perks from', ALL_PACKAGE_IDS.length, 'package IDs:', ALL_PACKAGE_IDS);
+      
+      const allPerkIds: string[] = [];
+      
+      // Query each package for perk creation events
+      for (const packageId of ALL_PACKAGE_IDS) {
+        try {
+          console.log('📦 Checking package:', packageId);
+          
+          const perkCreatedEvents = await suiClient.queryEvents({
+            query: {
+              MoveEventType: `${packageId}::perk_manager::PerkDefinitionCreated`
+            },
+            order: 'descending',
+            limit: 50,
+          });
 
-      const perkIds: string[] = [];
-      for (const event of perkCreatedEvents.data) {
-        if (event.parsedJson && typeof event.parsedJson === 'object') {
-          const eventData = event.parsedJson as any;
-          perkIds.push(eventData.perk_definition_id);
+          console.log(`📊 Found ${perkCreatedEvents.data.length} perk creation events in package ${packageId.slice(0, 8)}...`);
+          
+          for (const event of perkCreatedEvents.data) {
+            if (event.parsedJson && typeof event.parsedJson === 'object') {
+              const eventData = event.parsedJson as any;
+              allPerkIds.push(eventData.perk_definition_id);
+            }
+          }
+        } catch (packageError) {
+          console.warn(`⚠️ Failed to query package ${packageId.slice(0, 8)}...:`, packageError);
         }
+      }
+      
+      console.log('🎯 Total extracted perk IDs:', allPerkIds.length);
+      if (allPerkIds.length === 0) {
+        console.warn('⚠️ No perk IDs found in any package');
+        return [];
       }
 
       // Fetch perk details
       const fetchedPerks: PerkDefinition[] = [];
       const batchSize = 5; // Small batches for reliability
       
-      for (let i = 0; i < perkIds.length; i += batchSize) {
-        const batch = perkIds.slice(i, i + batchSize);
+      for (let i = 0; i < allPerkIds.length; i += batchSize) {
+        const batch = allPerkIds.slice(i, i + batchSize);
         const batchPromises = batch.map(async (id) => {
           try {
             const result = await suiClient.getObject({
@@ -148,7 +172,7 @@ export const usePerkMarketplace = () => {
                 // Additional fields for UI
                 icon: fields.icon,
                 claimCount: parseInt(fields.total_claims_count || '0'),
-                packageId,
+                packageId: SUI_CONFIG.packageIds.perkManager, // Use the main package ID for transactions
                 
                 // Revenue sharing
                 partner_share_percentage: parseInt(revenueSplit.partner_share_percentage || '70'),
@@ -168,14 +192,15 @@ export const usePerkMarketplace = () => {
         fetchedPerks.push(...validPerks);
         
         // Small delay between batches
-        if (i + batchSize < perkIds.length) {
+        if (i + batchSize < allPerkIds.length) {
           await new Promise(resolve => setTimeout(resolve, 100));
         }
       }
 
+      console.log('✅ Successfully fetched', fetchedPerks.length, 'active perks');
       return fetchedPerks;
     } catch (error) {
-      console.error('Failed to fetch marketplace perks:', error);
+      console.error('❌ Failed to fetch marketplace perks:', error);
       throw error;
     }
   };
@@ -225,7 +250,8 @@ export const usePerkMarketplace = () => {
     try {
       const packageId = SUI_CONFIG.packageIds.perkManager;
       
-      const claimedObjects = await suiClient.getOwnedObjects({
+      // Query for ClaimedPerk objects owned by the current user
+      let claimedObjects = await suiClient.getOwnedObjects({
         owner: currentAccount.address,
         filter: {
           StructType: `${packageId}::perk_manager::ClaimedPerk`
@@ -236,22 +262,54 @@ export const usePerkMarketplace = () => {
         },
       });
 
+      console.log('📊 Found', claimedObjects.data.length, 'claimed perk objects using specific filter');
+
+      // If no results, try querying all objects and filtering (fallback mechanism like main frontend)
+      if (claimedObjects.data.length === 0) {
+        console.log('🔄 No results with specific filter, trying fallback method...');
+        const allObjects = await suiClient.getOwnedObjects({
+          owner: currentAccount.address,
+          options: {
+            showContent: true,
+            showType: true,
+          },
+        });
+        
+        // Filter for ClaimedPerk objects
+        const claimedPerkObjects = allObjects.data.filter((obj: any) => {
+          const objectType = obj.data?.type;
+          return objectType && objectType.includes('ClaimedPerk');
+        });
+        
+        console.log('📊 Found', claimedPerkObjects.length, 'claimed perk objects using fallback method');
+        
+        claimedObjects = {
+          data: claimedPerkObjects,
+          hasNextPage: false,
+          nextCursor: null
+        };
+      }
+      
       const claimedPerkIds = new Set<string>();
       
       claimedObjects.data.forEach((obj: any) => {
         if (obj.data?.content && obj.data.content.dataType === 'moveObject') {
           const fields = (obj.data.content as any).fields;
+          
+          // Try different possible field names
           const perkDefinitionId = fields.perk_definition_id || fields.perkDefinitionId || fields.definition_id;
           
           if (perkDefinitionId) {
+            console.log('🎯 Found claimed perk ID:', perkDefinitionId);
             claimedPerkIds.add(perkDefinitionId);
           }
         }
       });
       
+      console.log('✅ Loaded', claimedPerkIds.size, 'claimed perk IDs:', Array.from(claimedPerkIds));
       setClaimedPerks(claimedPerkIds);
     } catch (error) {
-      console.error('Failed to fetch claimed perks:', error);
+      console.error('❌ Failed to fetch claimed perks:', error);
       setClaimedPerks(new Set());
     }
   };
@@ -367,8 +425,10 @@ export const usePerkMarketplace = () => {
       // Try cache first
       const cachedPerks = getLocalStorageCache();
       if (cachedPerks && cachedPerks.length > 0) {
+        console.log('📦 Using cached perks:', cachedPerks.length);
         // Apply brand filtering to cached perks
         const filteredPerks = cachedPerks.filter(perk => shouldDisplayPerk(perk, BRAND_CONFIG));
+        console.log('✅ After filtering cached perks:', filteredPerks.length, 'remain');
         setPerks(filteredPerks);
         setIsLoading(false);
         
@@ -382,8 +442,16 @@ export const usePerkMarketplace = () => {
       const allPerks = await fetchMarketplacePerks();
       
       // Apply brand filtering
-      const filteredPerks = allPerks.filter(perk => shouldDisplayPerk(perk, BRAND_CONFIG));
+      console.log('🎯 Applying brand filtering to', allPerks.length, 'perks');
+      const filteredPerks = allPerks.filter(perk => {
+        const shouldShow = shouldDisplayPerk(perk, BRAND_CONFIG);
+        if (!shouldShow) {
+          console.log('❌ Filtered out perk:', perk.name, perk.id);
+        }
+        return shouldShow;
+      });
       
+      console.log('✅ After brand filtering:', filteredPerks.length, 'perks remain');
       setPerks(filteredPerks);
       setLocalStorageCache(allPerks); // Cache all perks, filter on display
       

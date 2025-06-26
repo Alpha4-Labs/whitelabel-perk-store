@@ -1,15 +1,19 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useCurrentAccount, useConnectWallet, useDisconnectWallet, useWallets } from '@mysten/dapp-kit';
 import { toast, Toaster } from 'react-hot-toast';
 import { CuratedPerkMarketplace } from './CuratedPerkMarketplace';
+import { PerkRedemptionCenter } from './PerkRedemptionCenter';
 import { PerkDebugHelper } from './PerkDebugHelper';
 import { BRAND_CONFIG, generateCSSVars } from '../config/brand';
+
+type TabType = 'marketplace' | 'redemption';
 
 export const WhiteLabelApp: React.FC = () => {
   const currentAccount = useCurrentAccount();
   const { mutate: connectWallet } = useConnectWallet();
   const { mutate: disconnectWallet } = useDisconnectWallet();
   const wallets = useWallets();
+  const [activeTab, setActiveTab] = useState<TabType>('marketplace');
 
   // Apply brand CSS variables
   useEffect(() => {
@@ -241,10 +245,56 @@ export const WhiteLabelApp: React.FC = () => {
             </div>
           </div>
         ) : (
-          /* Marketplace - Connected */
+          /* Tabbed Interface - Connected */
           <div className="space-y-8">
-            {/* Curated Marketplace */}
-            <CuratedPerkMarketplace />
+            {/* Tab Navigation */}
+            <div className="flex items-center justify-center">
+              <div 
+                className="flex rounded-xl p-1"
+                style={{ 
+                  backgroundColor: 'var(--color-background-card)',
+                  border: '1px solid var(--color-border)'
+                }}
+              >
+                <button
+                  onClick={() => setActiveTab('marketplace')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'marketplace' 
+                      ? 'shadow-md transform scale-105' 
+                      : 'hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: activeTab === 'marketplace' ? 'var(--color-primary)' : 'transparent',
+                    color: activeTab === 'marketplace' ? 'var(--color-text)' : 'var(--color-text-muted)'
+                  }}
+                >
+                  🛍️ Marketplace
+                </button>
+                <button
+                  onClick={() => setActiveTab('redemption')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'redemption' 
+                      ? 'shadow-md transform scale-105' 
+                      : 'hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: activeTab === 'redemption' ? 'var(--color-primary)' : 'transparent',
+                    color: activeTab === 'redemption' ? 'var(--color-text)' : 'var(--color-text-muted)'
+                  }}
+                >
+                  🎁 Redemption
+                </button>
+              </div>
+            </div>
+
+            {/* Tab Content */}
+            <div className="min-h-[600px]">
+              {activeTab === 'marketplace' ? (
+                <CuratedPerkMarketplace />
+              ) : (
+                <PerkRedemptionCenter />
+              )}
+            </div>
           </div>
         )}
       </main>
