@@ -94,16 +94,27 @@ export const AlphaPointsBalance: React.FC = () => {
       console.log('🔧 Using package:', SUI_CONFIG.packageIds.perkManager);
       console.log('🔧 Using ledger:', SUI_CONFIG.sharedObjects.ledger);
       
-      // Try a simpler approach - just get the total balance first
+      // Use the same approach as the main frontend - get available and locked separately
       const txb = new Transaction();
 
-      // Try the integration module function that might be simpler
+      // Get available balance
       txb.moveCall({
-        target: `${SUI_CONFIG.packageIds.perkManager}::integration::get_user_points_balance`,
+        target: `${SUI_CONFIG.packageIds.perkManager}::ledger::get_available_balance`,
         arguments: [
           txb.object(SUI_CONFIG.sharedObjects.ledger),
           txb.pure.address(currentAccount.address),
         ],
+        typeArguments: [],
+      });
+
+      // Get locked balance
+      txb.moveCall({
+        target: `${SUI_CONFIG.packageIds.perkManager}::ledger::get_locked_balance`,
+        arguments: [
+          txb.object(SUI_CONFIG.sharedObjects.ledger),
+          txb.pure.address(currentAccount.address),
+        ],
+        typeArguments: [],
       });
 
       const inspectResult = await suiClient.devInspectTransactionBlock({
@@ -120,25 +131,42 @@ export const AlphaPointsBalance: React.FC = () => {
 
       console.log('📊 DevInspect result:', inspectResult);
       
-      if (!inspectResult.results || inspectResult.results.length < 1) {
+      if (!inspectResult.results || inspectResult.results.length < 2) {
         console.error('DevInspect results missing or incomplete:', inspectResult);
-        throw new Error('Could not retrieve point balance: Invalid response structure.');
+        throw new Error('Could not retrieve point balances: Invalid response structure.');
       }
       
-      const balanceResult = inspectResult.results[0];
-      if (balanceResult?.returnValues?.[0]) {
-        const [bytes, type] = balanceResult.returnValues[0];
+      let available = 0;
+      let locked = 0;
+      
+      const availableResult = inspectResult.results[0];
+      if (availableResult?.returnValues?.[0]) {
+        const [bytes, type] = availableResult.returnValues[0];
         if (type === 'u64' && Array.isArray(bytes)) {
-          const totalBalance = decodeU64(bytes);
-          console.log('💰 Found total balance:', totalBalance);
-          setAvailableBalance(totalBalance);
-          setLockedBalance(0); // For now, treat all as available
+          available = decodeU64(bytes);
         } else {
-          throw new Error(`Unexpected format for balance. Expected type 'u64' and Array bytes.`);
+          throw new Error(`Unexpected format for available balance. Expected type 'u64' and Array bytes.`);
         }
       } else {
-        throw new Error("Could not find balance return value.");
+        throw new Error("Could not find available balance return value.");
       }
+      
+      const lockedResult = inspectResult.results[1];
+      if (lockedResult?.returnValues?.[0]) {
+        const [bytes, type] = lockedResult.returnValues[0];
+        if (type === 'u64' && Array.isArray(bytes)) {
+          locked = decodeU64(bytes);
+        } else {
+          throw new Error(`Unexpected format for locked balance. Expected type 'u64' and Array bytes.`);
+        }
+      } else {
+        throw new Error("Could not find locked balance return value.");
+      }
+      
+      console.log('💰 Found available balance:', available);
+      console.log('🔒 Found locked balance:', locked);
+      setAvailableBalance(available);
+      setLockedBalance(locked);
       
     } catch (error: any) {
       console.error('❌ Failed to fetch Alpha Points balance:', error);

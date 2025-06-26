@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { usePerkMarketplace } from '../hooks/usePerkMarketplace';
-import type { PerkDefinition } from '../types/index';
-import { formatPoints } from '../utils/format';
+import { useCurrentAccount, useSuiClient } from '@mysten/dapp-kit';
+import { SUI_CONFIG } from '../config/sui';
+import { Button } from './ui/Button';
+import { testChainConnection, testAlphaPointsQuery } from '../utils/chainTest';
 
 /**
  * Debug Helper Component for Perk Curation
@@ -10,285 +11,198 @@ import { formatPoints } from '../utils/format';
  * for easy curation configuration. Only shows when VITE_DEBUG_MODE=true
  */
 export const PerkDebugHelper: React.FC = () => {
-  const { perks, loading, error } = usePerkMarketplace();
-  const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const currentAccount = useCurrentAccount();
+  const suiClient = useSuiClient();
+  const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
-  // Only show in debug mode
-  if (import.meta.env.VITE_DEBUG_MODE !== 'true') {
-    return null;
-  }
-
-  const copyToClipboard = async (text: string) => {
+  const runDebugQuery = async () => {
+    if (!currentAccount?.address) return;
+    
+    setIsLoading(true);
     try {
-      await navigator.clipboard.writeText(text);
-      setCopiedId(text);
-      setTimeout(() => setCopiedId(null), 2000);
+      console.log('🔍 Debug: Starting comprehensive analysis...');
+      
+      // Test chain connection first
+      const connectionTest = await testChainConnection(currentAccount.address);
+      
+      // Test Alpha Points balance
+      const alphaPointsTest = await testAlphaPointsQuery(currentAccount.address);
+      
+      // Get all objects owned by user (using the existing suiClient from hook)
+      const allObjects = await suiClient.getOwnedObjects({
+        owner: currentAccount.address,
+        options: {
+          showContent: true,
+          showType: true,
+        },
+      });
+      
+      console.log('📦 Debug: Found', allObjects.data.length, 'total objects');
+      
+      // Filter for different types
+      const claimedPerks = allObjects.data.filter((obj: any) => {
+        const objectType = obj.data?.type;
+        return objectType && objectType.includes('ClaimedPerk');
+      });
+      
+      const perkDefinitions = allObjects.data.filter((obj: any) => {
+        const objectType = obj.data?.type;
+        return objectType && objectType.includes('PerkDefinition');
+      });
+      
+      const alpha4Objects = allObjects.data.filter((obj: any) => {
+        const objectType = obj.data?.type;
+        return objectType && objectType.includes(SUI_CONFIG.packageIds.perkManager);
+      });
+      
+      const debugData = {
+        // Connection test results
+        chainConnection: connectionTest,
+        alphaPointsBalance: alphaPointsTest,
+        
+        // Object counts
+        totalObjects: allObjects.data.length,
+        claimedPerks: claimedPerks.length,
+        perkDefinitions: perkDefinitions.length,
+        alpha4Objects: alpha4Objects.length,
+        
+        // Sample data
+        sampleObjects: allObjects.data.slice(0, 5).map((obj: any) => ({
+          id: obj.data?.objectId,
+          type: obj.data?.type,
+          hasContent: !!obj.data?.content,
+          fields: obj.data?.content?.dataType === 'moveObject' ? Object.keys((obj.data.content as any).fields || {}) : []
+        })),
+        claimedPerkDetails: claimedPerks.map((obj: any) => ({
+          id: obj.data?.objectId,
+          type: obj.data?.type,
+          fields: obj.data?.content?.dataType === 'moveObject' ? (obj.data.content as any).fields : null
+        })),
+        
+        // Configuration
+        packageId: SUI_CONFIG.packageIds.perkManager,
+        network: SUI_CONFIG.network,
+        rpcUrl: SUI_CONFIG.rpcUrl,
+        userAddress: currentAccount.address
+      };
+      
+      console.log('🔍 Complete debug results:', debugData);
+      setDebugInfo(debugData);
+      
     } catch (error) {
-      console.error('Failed to copy to clipboard:', error);
+      console.error('❌ Debug query failed:', error);
+      setDebugInfo({
+        error: error.message,
+        stack: error.stack
+      });
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  const copyAllIds = async () => {
-    const filteredPerks = getFilteredPerks();
-    const ids = filteredPerks.map(perk => `'${perk.objectId}'`).join(',\n      ');
-    const configSnippet = `// Generated perk IDs for brand configuration
-export const brandConfig = {
-  curation: {
-    method: 'perk_ids',
-    perkIds: [
-      ${ids}
-    ],
-  },
-};`;
-    
-    await copyToClipboard(configSnippet);
-  };
-
-  const getFilteredPerks = (): PerkDefinition[] => {
-    if (!perks) return [];
-    
-    return perks.filter(perk => {
-      const matchesSearch = !searchTerm || 
-        perk.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        perk.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        perk.creatorPartnerCapId?.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      const matchesTags = selectedTags.length === 0 || 
-        selectedTags.some(tag => perk.tags?.includes(tag));
-      
-      return matchesSearch && matchesTags;
-    });
-  };
-
-  const getAllTags = (): string[] => {
-    if (!perks) return [];
-    
-    const tagSet = new Set<string>();
-    perks.forEach(perk => {
-      perk.tags?.forEach(tag => tagSet.add(tag));
-    });
-    
-    return Array.from(tagSet).sort();
-  };
-
-  const toggleTag = (tag: string) => {
-    setSelectedTags(prev => 
-      prev.includes(tag) 
-        ? prev.filter(t => t !== tag)
-        : [...prev, tag]
-    );
-  };
-
-  if (loading) {
+  if (!currentAccount?.address) {
     return (
-      <div className="fixed top-4 right-4 bg-black/90 text-white p-4 rounded-lg border border-yellow-500 z-50">
-        <div className="text-yellow-400 font-bold mb-2">🔧 Debug Mode: Loading Perks...</div>
+      <div className="p-4 rounded-lg border border-yellow-500 bg-yellow-50">
+        <p className="text-yellow-800">Connect your wallet to use the debug helper</p>
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="fixed top-4 right-4 bg-black/90 text-white p-4 rounded-lg border border-red-500 z-50">
-        <div className="text-red-400 font-bold mb-2">🔧 Debug Mode: Error Loading Perks</div>
-        <div className="text-sm text-red-300">{error}</div>
-      </div>
-    );
-  }
-
-  const filteredPerks = getFilteredPerks();
-  const allTags = getAllTags();
 
   return (
-    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 overflow-auto">
-      <div className="min-h-screen p-4">
-        <div className="max-w-6xl mx-auto bg-gray-900 rounded-xl border border-yellow-500 shadow-2xl">
-          {/* Header */}
-          <div className="bg-yellow-500 text-black p-4 rounded-t-xl">
-            <div className="flex items-center justify-between">
-              <div>
-                <h2 className="text-xl font-bold">🔧 Perk Curation Debug Helper</h2>
-                <p className="text-sm opacity-80">Discover and copy perk IDs for your brand configuration</p>
-              </div>
-              <button
-                onClick={() => window.location.reload()}
-                className="px-4 py-2 bg-black text-yellow-500 rounded-lg hover:bg-gray-800 transition-colors"
-              >
-                Close Debug
-              </button>
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="p-6 border-b border-gray-700">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Search */}
-              <div>
-                <label className="block text-white font-medium mb-2">Search Perks</label>
-                <input
-                  type="text"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  placeholder="Search by name, description, or company..."
-                  className="w-full px-4 py-2 bg-gray-800 text-white border border-gray-600 rounded-lg focus:border-yellow-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Tag Filter */}
-              <div>
-                <label className="block text-white font-medium mb-2">Filter by Tags</label>
-                <div className="flex flex-wrap gap-2 max-h-32 overflow-y-auto">
-                  {allTags.map(tag => (
-                    <button
-                      key={tag}
-                      onClick={() => toggleTag(tag)}
-                      className={`px-3 py-1 rounded-full text-sm transition-colors ${
-                        selectedTags.includes(tag)
-                          ? 'bg-yellow-500 text-black'
-                          : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                      }`}
-                    >
-                      {tag}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Actions */}
-            <div className="mt-4 flex items-center justify-between">
-              <div className="text-gray-400">
-                Showing {filteredPerks.length} of {perks?.length || 0} perks
-              </div>
-              
-              <div className="space-x-3">
-                <button
-                  onClick={() => copyAllIds()}
-                  className="px-4 py-2 bg-yellow-500 text-black rounded-lg hover:bg-yellow-400 transition-colors font-medium"
-                >
-                  📋 Copy All IDs as Config
-                </button>
-                
-                <button
-                  onClick={() => {
-                    const data = filteredPerks.map(perk => ({
-                      id: perk.objectId,
-                      name: perk.name,
-                      company: perk.creatorPartnerCapId,
-                      tags: perk.tags,
-                      price: perk.currentAlphaPointsPrice
-                    }));
-                    console.table(data);
-                    alert('Perk data logged to console! Open DevTools to see the table.');
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-500 transition-colors"
-                >
-                  📊 Log to Console
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Perks List */}
-          <div className="p-6">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              {filteredPerks.map(perk => (
-                <div
-                  key={perk.objectId}
-                  className="bg-gray-800 border border-gray-700 rounded-lg p-4 hover:border-yellow-500 transition-colors"
-                >
-                  {/* Perk Header */}
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="text-white font-semibold text-lg mb-1">{perk.name}</h3>
-                      {perk.creatorPartnerCapId && (
-                        <p className="text-gray-400 text-sm">by {perk.creatorPartnerCapId.slice(0, 8)}...</p>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-yellow-400 font-bold">
-                        {formatPoints(perk.currentAlphaPointsPrice)} αP
-                      </div>
-                      {perk.totalClaimsCount && (
-                        <div className="text-gray-400 text-xs">
-                          {perk.totalClaimsCount} claims
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Description */}
-                  {perk.description && (
-                    <p className="text-gray-300 text-sm mb-3 line-clamp-2">
-                      {perk.description}
-                    </p>
-                  )}
-
-                  {/* Tags */}
-                  {perk.tags && perk.tags.length > 0 && (
-                    <div className="flex flex-wrap gap-1 mb-3">
-                      {perk.tags.map(tag => (
-                        <span
-                          key={tag}
-                          className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Perk ID */}
-                  <div className="bg-gray-900 border border-gray-600 rounded p-3 mt-3">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-gray-400 text-xs mb-1">Perk ID:</div>
-                        <code className="text-green-400 text-sm font-mono break-all">
-                          {perk.objectId}
-                        </code>
-                      </div>
-                      <button
-                        onClick={() => copyToClipboard(perk.objectId)}
-                        className={`ml-3 px-3 py-1 rounded text-sm transition-colors ${
-                          copiedId === perk.objectId
-                            ? 'bg-green-600 text-white'
-                            : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                        }`}
-                      >
-                        {copiedId === perk.objectId ? '✓ Copied!' : '📋 Copy'}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {filteredPerks.length === 0 && (
-              <div className="text-center py-12">
-                <div className="text-gray-400 text-lg mb-2">No perks match your filters</div>
-                <p className="text-gray-500">Try adjusting your search term or selected tags</p>
-              </div>
-            )}
-          </div>
-
-          {/* Footer */}
-          <div className="bg-gray-800 p-4 rounded-b-xl border-t border-gray-700">
-            <div className="text-center text-gray-400 text-sm">
-              <p className="mb-2">
-                <strong>💡 Usage Tips:</strong>
-              </p>
-              <ul className="text-xs space-y-1">
-                <li>• Use "Copy All IDs as Config" to generate ready-to-use brand configuration</li>
-                <li>• Filter by tags to find perks relevant to your industry</li>
-                <li>• Check the console for detailed perk data tables</li>
-                <li>• Set VITE_DEBUG_MODE=false to hide this helper in production</li>
-              </ul>
-            </div>
-          </div>
-        </div>
+    <div className="p-6 rounded-lg border-2 border-blue-500 bg-blue-50 space-y-4">
+      <div className="flex items-center justify-between">
+        <h3 className="text-lg font-semibold text-blue-800">🔍 Perk Debug Helper</h3>
+        <Button 
+          onClick={runDebugQuery}
+          disabled={isLoading}
+          variant="outline"
+          size="sm"
+        >
+          {isLoading ? 'Querying...' : 'Run Debug Query'}
+        </Button>
       </div>
+      
+      {debugInfo && (
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-blue-600">{debugInfo.totalObjects}</div>
+              <div className="text-sm text-blue-800">Total Objects</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">{debugInfo.claimedPerks}</div>
+              <div className="text-sm text-blue-800">Claimed Perks</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">{debugInfo.perkDefinitions}</div>
+              <div className="text-sm text-blue-800">Perk Definitions</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-orange-600">{debugInfo.alpha4Objects}</div>
+              <div className="text-sm text-blue-800">Alpha4 Objects</div>
+            </div>
+          </div>
+          
+          <div className="bg-white p-4 rounded border">
+            <h4 className="font-semibold mb-2">Configuration & Connection</h4>
+            <div className="text-sm space-y-1">
+              <div><strong>User Address:</strong> {debugInfo.userAddress}</div>
+              <div><strong>Package ID:</strong> {debugInfo.packageId}</div>
+              <div><strong>Network:</strong> {debugInfo.network}</div>
+              <div><strong>RPC URL:</strong> {debugInfo.rpcUrl}</div>
+              
+              {debugInfo.chainConnection && (
+                <div className="mt-3 pt-3 border-t">
+                  <div><strong>Chain Connection:</strong> {debugInfo.chainConnection.success ? '✅ Success' : '❌ Failed'}</div>
+                  {debugInfo.chainConnection.chainId && (
+                    <div><strong>Chain ID:</strong> {debugInfo.chainConnection.chainId}</div>
+                  )}
+                  {debugInfo.chainConnection.error && (
+                    <div className="text-red-600"><strong>Error:</strong> {debugInfo.chainConnection.error}</div>
+                  )}
+                </div>
+              )}
+              
+              {debugInfo.alphaPointsBalance && (
+                <div className="mt-3 pt-3 border-t">
+                  <div><strong>Alpha Points Query:</strong> {debugInfo.alphaPointsBalance.success ? '✅ Success' : '❌ Failed'}</div>
+                  {debugInfo.alphaPointsBalance.balance !== undefined && (
+                    <div><strong>Balance:</strong> {debugInfo.alphaPointsBalance.balance} αP</div>
+                  )}
+                  {debugInfo.alphaPointsBalance.error && (
+                    <div className="text-red-600"><strong>Error:</strong> {debugInfo.alphaPointsBalance.error}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+          
+          {debugInfo.error ? (
+            <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+              <strong>Error:</strong> {debugInfo.error}
+            </div>
+          ) : (
+            <>
+              {debugInfo.claimedPerkDetails.length > 0 && (
+                <div className="bg-white p-4 rounded border">
+                  <h4 className="font-semibold mb-2">Claimed Perk Details</h4>
+                  <pre className="text-xs overflow-auto bg-gray-100 p-2 rounded">
+                    {JSON.stringify(debugInfo.claimedPerkDetails, null, 2)}
+                  </pre>
+                </div>
+              )}
+              
+              <div className="bg-white p-4 rounded border">
+                <h4 className="font-semibold mb-2">Sample Objects (First 5)</h4>
+                <pre className="text-xs overflow-auto bg-gray-100 p-2 rounded">
+                  {JSON.stringify(debugInfo.sampleObjects, null, 2)}
+                </pre>
+              </div>
+            </>
+          )}
+        </div>
+      )}
     </div>
   );
 }; 

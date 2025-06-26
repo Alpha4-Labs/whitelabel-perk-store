@@ -245,7 +245,7 @@ export const CuratedPerkMarketplace: React.FC<CuratedPerkMarketplaceProps> = ({
         }, 2000);
       }
     } catch (error: any) {
-      console.error('Perk purchase failed:', error);
+      // Perk purchase failed
       
       if (error.message?.includes('EPerkNotActive')) {
         toast.error('❌ This perk is not currently active.');
@@ -439,27 +439,7 @@ export const CuratedPerkMarketplace: React.FC<CuratedPerkMarketplaceProps> = ({
               {isLoading ? '⏳' : '🔄'} Refresh
             </button>
             
-            <div className="text-right">
-              <div>
-                <span style={{ color: 'var(--color-text-muted)' }} className="mr-2">
-                  Available Balance:
-                </span>
-                <span 
-                  className="text-xl font-semibold"
-                  style={{ color: 'var(--color-secondary)' }}
-                >
-                  {userAlphaPoints.toLocaleString()} αP
-                </span>
-              </div>
-              {BRAND_CONFIG.features.showPriceInUSD && (
-                <div className="text-sm mt-1" style={{ color: 'var(--color-success)' }}>
-                  ≈ ${(userAlphaPoints / 1000).toLocaleString('en-US', { 
-                    minimumFractionDigits: 2, 
-                    maximumFractionDigits: 2 
-                  })} USD
-                </div>
-              )}
-            </div>
+
           </div>
         </div>
 

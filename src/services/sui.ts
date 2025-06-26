@@ -44,11 +44,7 @@ export class SuiService {
   private cache = new SimpleCache();
 
   constructor() {
-    console.log('🔧 Initializing SuiClient with config:', {
-      network: SUI_CONFIG.network,
-      rpcUrl: SUI_CONFIG.rpcUrl,
-      packageId: SUI_CONFIG.packageIds.perkManager,
-    });
+    // Initializing SuiClient with config
 
     // Initialize the SuiClient with proper configuration
     this.client = new SuiClient({
@@ -63,16 +59,13 @@ export class SuiService {
     const cacheKey = `user_claimed_perks_${userAddress}`;
     
     try {
-      console.log('🔍 Fetching ClaimedPerks for:', userAddress);
-      console.log('📦 Using package ID:', SUI_CONFIG.packageIds.perkManager);
-      console.log('🌐 RPC URL:', SUI_CONFIG.rpcUrl);
-      console.log('🏗️ Using real contracts:', isUsingRealContracts());
+      // Fetching ClaimedPerks for user
       
       return await this.cache.getOrFetch(
         cacheKey,
         async () => {
           if (!isUsingRealContracts()) {
-            console.log('📝 Using mock data (no valid package ID configured)');
+            // Using mock data (no valid package ID configured)
             return this.getMockClaimedPerks();
           }
 
@@ -80,17 +73,17 @@ export class SuiService {
           const claimedPerks = await this.fetchClaimedPerksFromObjects(userAddress);
           
           if (claimedPerks.length === 0) {
-            console.log('📝 No ClaimedPerk objects found, using mock data for demo');
+            // Console log removed
             return this.getMockClaimedPerks();
           }
 
-          console.log(`✅ Successfully loaded ${claimedPerks.length} claimed perks from blockchain`);
+          // Console log removed
           return claimedPerks;
         }
       );
     } catch (error) {
-      console.error('❌ Error loading perks from blockchain:', error);
-      console.log('📝 Falling back to mock data');
+      // Console log removed
+      // Console log removed
       return this.getMockClaimedPerks();
     }
   }
@@ -99,12 +92,12 @@ export class SuiService {
    * Fetch ClaimedPerk objects owned by the user using modern SDK patterns
    */
   private async fetchClaimedPerksFromObjects(userAddress: string): Promise<ClaimedPerk[]> {
-    console.log('🔍 Searching for ClaimedPerk objects owned by:', userAddress);
+    // Console log removed
     
     const packageId = SUI_CONFIG.packageIds.perkManager;
     const claimedPerkType = SUI_CONFIG.types.claimedPerk(packageId);
     
-    console.log(`🔍 Searching for objects of type: ${claimedPerkType}`);
+    // Console log removed
     
     try {
       const response = await rateLimitedRequest(() =>
@@ -121,7 +114,7 @@ export class SuiService {
         })
       );
 
-      console.log(`📊 Found ${response.data.length} owned objects of type ClaimedPerk`);
+      // Console log removed
 
       if (response.data.length === 0) {
         return [];
@@ -132,12 +125,12 @@ export class SuiService {
       
       for (const objectResponse of response.data) {
         if (objectResponse.error) {
-          console.warn('⚠️ Error fetching object:', objectResponse.error);
+          // Console log removed
           continue;
         }
 
         if (!objectResponse.data) {
-          console.warn('⚠️ No data in object response');
+          // Console log removed
           continue;
         }
 
@@ -147,13 +140,13 @@ export class SuiService {
             claimedPerks.push(perk);
           }
         } catch (parseError) {
-          console.warn('⚠️ Error parsing ClaimedPerk object:', parseError);
+          // Console log removed
         }
       }
 
       return claimedPerks;
     } catch (error) {
-      console.error(`❌ Error fetching objects for type ${claimedPerkType}:`, error);
+      // Console log removed
       throw error;
     }
   }
@@ -164,12 +157,12 @@ export class SuiService {
   private async parseClaimedPerkObject(objectData: any): Promise<ClaimedPerk | null> {
     try {
       if (!objectData.content || objectData.content.dataType !== 'moveObject') {
-        console.warn('⚠️ Object is not a Move object');
+        // Console log removed
         return null;
       }
 
       const fields = objectData.content.fields;
-      console.log('📋 ClaimedPerk fields:', fields);
+      // Console log removed
       
       // ClaimedPerk only contains references - we need to fetch the actual PerkDefinition
       const perkDefinitionId = fields.perk_definition_id;
@@ -179,17 +172,17 @@ export class SuiService {
       const remainingUses = fields.remaining_uses;
 
       if (!perkDefinitionId) {
-        console.warn('⚠️ ClaimedPerk missing perk_definition_id');
+        // Console log removed
         return null;
       }
 
-      console.log(`🔍 Fetching PerkDefinition: ${perkDefinitionId}`);
+      // Console log removed
 
       // Fetch the PerkDefinition object to get the actual perk data
       const perkDefinition = await this.fetchPerkDefinition(perkDefinitionId);
       
       if (!perkDefinition) {
-        console.warn(`⚠️ Could not fetch PerkDefinition for ID: ${perkDefinitionId}`);
+        // Console log removed
         return null;
       }
 
@@ -207,7 +200,7 @@ export class SuiService {
         usdcPrice: perkDefinition.usdc_price,
       };
     } catch (error) {
-      console.error('❌ Error parsing ClaimedPerk object:', error);
+      // Console log removed
       return null;
     }
   }
@@ -217,7 +210,7 @@ export class SuiService {
    */
   private async fetchPerkDefinition(perkDefinitionId: string): Promise<any | null> {
     try {
-      console.log(`🔍 Fetching PerkDefinition object: ${perkDefinitionId}`);
+      // Console log removed
       
       const response = await rateLimitedRequest(() =>
         this.client.getObject({
@@ -230,12 +223,12 @@ export class SuiService {
       );
 
       if (!response.data?.content || response.data.content.dataType !== 'moveObject') {
-        console.warn(`⚠️ PerkDefinition ${perkDefinitionId} is not a valid Move object`);
+        // Console log removed
         return null;
       }
 
       const fields = response.data.content.fields;
-      console.log('📋 PerkDefinition fields:', fields);
+      // Console log removed
 
       // Parse the PerkDefinition fields
       return {
@@ -254,7 +247,7 @@ export class SuiService {
         tags: fields.tags || [],
       };
     } catch (error) {
-      console.error(`❌ Error fetching PerkDefinition ${perkDefinitionId}:`, error);
+      // Console log removed
       return null;
     }
   }
@@ -360,7 +353,7 @@ export class SuiService {
    * Refresh the cache and reload perks
    */
   async refreshPerkData(userAddress?: string): Promise<ClaimedPerk[]> {
-    console.log('🔄 Refreshing perk data (clearing cache)');
+    // Console log removed');
     this.cache.clear();
     if (userAddress) {
       return this.getClaimedPerks(userAddress);

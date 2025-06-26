@@ -3,10 +3,14 @@ import { useCurrentAccount, useConnectWallet, useDisconnectWallet, useWallets } 
 import { toast, Toaster } from 'react-hot-toast';
 import { CuratedPerkMarketplace } from './CuratedPerkMarketplace';
 import { PerkRedemptionCenter } from './PerkRedemptionCenter';
+import { GenerationCenter } from './GenerationCenter';
 import { PerkDebugHelper } from './PerkDebugHelper';
+import { PointsDisplay } from './PointsDisplay';
 import { BRAND_CONFIG, generateCSSVars } from '../config/brand';
 
-type TabType = 'marketplace' | 'redemption';
+type TabType = 'marketplace' | 'redemption' | 'generation';
+
+
 
 export const WhiteLabelApp: React.FC = () => {
   const currentAccount = useCurrentAccount();
@@ -104,7 +108,12 @@ export const WhiteLabelApp: React.FC = () => {
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full animate-pulse" style={{ backgroundColor: 'var(--color-success)' }}></div>
                 <span className="text-sm" style={{ color: 'var(--color-text-muted)' }}>Live on Sui Testnet</span>
-              </div>
+                            </div>
+              
+              {/* Alpha Points Display (when connected) */}
+              {currentAccount && (
+                <PointsDisplay />
+              )}
               
               {currentAccount ? (
                 <div className="flex items-center space-x-3">
@@ -271,6 +280,20 @@ export const WhiteLabelApp: React.FC = () => {
                   🛍️ Marketplace
                 </button>
                 <button
+                  onClick={() => setActiveTab('generation')}
+                  className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
+                    activeTab === 'generation' 
+                      ? 'shadow-md transform scale-105' 
+                      : 'hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: activeTab === 'generation' ? 'var(--color-primary)' : 'transparent',
+                    color: activeTab === 'generation' ? 'var(--color-text)' : 'var(--color-text-muted)'
+                  }}
+                >
+                  🚀 Earn Points
+                </button>
+                <button
                   onClick={() => setActiveTab('redemption')}
                   className={`px-6 py-3 rounded-lg font-medium transition-all duration-200 ${
                     activeTab === 'redemption' 
@@ -291,6 +314,8 @@ export const WhiteLabelApp: React.FC = () => {
             <div className="min-h-[600px]">
               {activeTab === 'marketplace' ? (
                 <CuratedPerkMarketplace />
+              ) : activeTab === 'generation' ? (
+                <GenerationCenter />
               ) : (
                 <PerkRedemptionCenter />
               )}
@@ -374,8 +399,7 @@ export const WhiteLabelApp: React.FC = () => {
         }}
       />
 
-      {/* Debug Helper - Only shows when VITE_DEBUG_MODE=true */}
-      <PerkDebugHelper />
+
     </div>
   );
 }; 

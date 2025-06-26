@@ -1,16 +1,17 @@
 /**
  * Format Alpha Points for display
  * @param points - Points value as string, number, or bigint
+ * @param decimals - Number of decimal places (default: 0)
  * @returns Formatted string with commas
  */
-export const formatPoints = (points: string | number | bigint): string => {
-  if (!points) return '0';
-  
-  const num = typeof points === 'bigint' ? Number(points) : Number(points);
-  
-  if (isNaN(num)) return '0';
-  
-  return new Intl.NumberFormat('en-US').format(num);
+export const formatPoints = (points: number | string, decimals = 0): string => {
+  if (typeof points === 'string') {
+    points = parseFloat(points);
+  }
+  return points.toLocaleString(undefined, {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
 };
 
 /**
@@ -126,4 +127,15 @@ export const formatNumber = (num: number): string => {
   }
   
   return num.toLocaleString();
+};
+
+/**
+ * Convert Alpha Points to USD for display (1000 AP = 1 USD)
+ */
+export const alphaPointsToUSD = (alphaPoints: number): string => {
+  const usdValue = alphaPoints / 1000;
+  return usdValue.toLocaleString(undefined, { 
+    minimumFractionDigits: 2, 
+    maximumFractionDigits: 2 
+  });
 }; 

@@ -1,9 +1,14 @@
 // Sui Network Configuration
-console.log('🔧 Loading environment variables:', {
-  VITE_SUI_NETWORK: import.meta.env.VITE_SUI_NETWORK,
-  VITE_SUI_RPC_URL: import.meta.env.VITE_SUI_RPC_URL,
-  VITE_PERK_MANAGER_PACKAGE_ID: import.meta.env.VITE_PERK_MANAGER_PACKAGE_ID,
-});
+
+// Helper function to validate Sui Object IDs
+const isValidSuiObjectId = (id: string | undefined): boolean => {
+  return typeof id === 'string' && id.startsWith('0x') && id.length === 66;
+};
+
+// Helper function to handle invalid IDs
+const handleInvalidId = (name: string, id: string | undefined): string => {
+  throw new Error(`Missing or invalid ${name} in environment variables. Please check your .env file.`);
+};
 
 export const SUI_CONFIG = {
   network: (import.meta.env.VITE_SUI_NETWORK as 'mainnet' | 'testnet' | 'devnet') || 'testnet',
@@ -11,17 +16,25 @@ export const SUI_CONFIG = {
   
   // Smart Contract Package IDs (update these when contracts are deployed)
   packageIds: {
-    main: import.meta.env.VITE_PACKAGE_ID || '0x8519374e972c0da6a44eea309fb8a8447722019de5186fdde98d3c2a10e704ec',
-    perkManager: import.meta.env.VITE_PERK_MANAGER_PACKAGE_ID || '0x8519374e972c0da6a44eea309fb8a8447722019de5186fdde98d3c2a10e704ec',
+    main: import.meta.env.VITE_PACKAGE_ID || import.meta.env.VITE_PERK_MANAGER_PACKAGE_ID,
+    perkManager: import.meta.env.VITE_PERK_MANAGER_PACKAGE_ID,
   },
   
   // Shared Objects (required for Alpha Points balance queries)
-  // Using current testnet shared object IDs from environment
+  // These MUST be provided via environment variables - no fallbacks
   sharedObjects: {
-    config: import.meta.env.VITE_CONFIG_ID || '0x0a2655cc000b24a316390753253f59de6691ec0b418d38bb6bca535c4c66e9bb',
-    ledger: import.meta.env.VITE_LEDGER_ID || '0x90f17af41623cdeccbeb2b30b5df435135247e34526d56c40c491b017452dc00',
-    stakingManager: import.meta.env.VITE_STAKING_MANAGER_ID || '0x3fa797fcbc0bec7390910311f432329e68e4fdf23f1a55033410e81f3ebd08f4',
-    oracle: import.meta.env.VITE_ORACLE_ID || '0x4e0a8f7a9bccc7bb88dd5d0c0ac9dd6186681cde14d8c981eaa238b93e22e02f',
+    config: isValidSuiObjectId(import.meta.env.VITE_CONFIG_ID) 
+      ? import.meta.env.VITE_CONFIG_ID 
+      : handleInvalidId('VITE_CONFIG_ID', import.meta.env.VITE_CONFIG_ID),
+    ledger: isValidSuiObjectId(import.meta.env.VITE_LEDGER_ID) 
+      ? import.meta.env.VITE_LEDGER_ID 
+      : handleInvalidId('VITE_LEDGER_ID', import.meta.env.VITE_LEDGER_ID),
+    stakingManager: isValidSuiObjectId(import.meta.env.VITE_STAKING_MANAGER_ID) 
+      ? import.meta.env.VITE_STAKING_MANAGER_ID 
+      : handleInvalidId('VITE_STAKING_MANAGER_ID', import.meta.env.VITE_STAKING_MANAGER_ID),
+    oracle: isValidSuiObjectId(import.meta.env.VITE_ORACLE_ID) 
+      ? import.meta.env.VITE_ORACLE_ID 
+      : handleInvalidId('VITE_ORACLE_ID', import.meta.env.VITE_ORACLE_ID),
   },
   
   // Object types
@@ -30,8 +43,6 @@ export const SUI_CONFIG = {
     perkDefinition: (packageId: string) => `${packageId}::perk_manager::PerkDefinition`,
   },
 } as const;
-
-console.log('🔧 Final SUI_CONFIG:', SUI_CONFIG);
 
 // Helper to check if using real contracts or mock data
 export const isUsingRealContracts = () => {

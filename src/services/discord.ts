@@ -61,7 +61,7 @@ export class DiscordAuthService {
 
     const authUrl = `https://discord.com/api/oauth2/authorize?${params.toString()}`;
     
-    console.log('Discord OAuth Configuration (Implicit Flow):', {
+    // Console log removed:', {
       clientId: DISCORD_CLIENT_ID,
       redirectUri: DISCORD_REDIRECT_URI,
       scopes: DISCORD_SCOPES,
@@ -94,7 +94,7 @@ export class DiscordAuthService {
     }
     
     if (state !== storedState) {
-      console.error('State mismatch:', { provided: state, stored: storedState });
+      // Console log removed
       throw new Error('Invalid OAuth state - possible CSRF attack or expired session');
     }
 
@@ -105,7 +105,7 @@ export class DiscordAuthService {
       this.accessToken = accessToken;
 
       // Fetch user info
-      console.log('Fetching Discord user info...');
+      // Console log removed
       const userResponse = await fetch('https://discord.com/api/users/@me', {
         headers: {
           Authorization: `Bearer ${this.accessToken}`,
@@ -161,7 +161,7 @@ export class DiscordAuthService {
       
       return this.user;
     } catch (error) {
-      console.error('Discord callback error:', error);
+      // Console log removed
       this.clearStorage();
       
       // Re-throw with more context if it's a generic error

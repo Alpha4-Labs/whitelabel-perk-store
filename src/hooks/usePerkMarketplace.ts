@@ -39,7 +39,7 @@ const setLocalStorageCache = (perks: PerkDefinition[]) => {
     localStorage.setItem(CACHE_KEY, JSON.stringify(perks));
     localStorage.setItem(CACHE_EXPIRY_KEY, expiryTime.toString());
   } catch (err) {
-    console.warn('Failed to cache perks:', err);
+          // Failed to cache perks - continue silently
   }
 };
 
@@ -66,14 +66,14 @@ export const usePerkMarketplace = () => {
         '0xfd761a2a5979db53f7f3176c0778695f6abafbb7c0eec8ce03136ae10dc2b47d', // Another known package
       ].filter(Boolean);
       
-      console.log('🔍 Fetching perks from', ALL_PACKAGE_IDS.length, 'package IDs:', ALL_PACKAGE_IDS);
+      // Fetching perks from multiple package IDs
       
       const allPerkIds: string[] = [];
       
       // Query each package for perk creation events
       for (const packageId of ALL_PACKAGE_IDS) {
         try {
-          console.log('📦 Checking package:', packageId);
+
           
           const perkCreatedEvents = await suiClient.queryEvents({
             query: {
@@ -83,7 +83,7 @@ export const usePerkMarketplace = () => {
             limit: 50,
           });
 
-          console.log(`📊 Found ${perkCreatedEvents.data.length} perk creation events in package ${packageId.slice(0, 8)}...`);
+
           
           for (const event of perkCreatedEvents.data) {
             if (event.parsedJson && typeof event.parsedJson === 'object') {
@@ -92,13 +92,11 @@ export const usePerkMarketplace = () => {
             }
           }
         } catch (packageError) {
-          console.warn(`⚠️ Failed to query package ${packageId.slice(0, 8)}...:`, packageError);
+          // Failed to query package - continue with next
         }
       }
       
-      console.log('🎯 Total extracted perk IDs:', allPerkIds.length);
       if (allPerkIds.length === 0) {
-        console.warn('⚠️ No perk IDs found in any package');
         return [];
       }
 
@@ -180,7 +178,7 @@ export const usePerkMarketplace = () => {
               } as PerkDefinition;
             }
           } catch (err) {
-            console.warn(`Failed to fetch perk ${id}:`, err);
+            // Failed to fetch perk - continue with next
             return null;
           }
         });
@@ -197,10 +195,10 @@ export const usePerkMarketplace = () => {
         }
       }
 
-      console.log('✅ Successfully fetched', fetchedPerks.length, 'active perks');
+
       return fetchedPerks;
     } catch (error) {
-      console.error('❌ Failed to fetch marketplace perks:', error);
+      // Failed to fetch marketplace perks
       throw error;
     }
   };
@@ -236,7 +234,7 @@ export const usePerkMarketplace = () => {
       
       setPartnerNames(prev => new Map([...prev, ...newNames]));
     } catch (error) {
-      console.error('Failed to fetch partner names:', error);
+      // Failed to fetch partner names
     }
   };
 
@@ -262,11 +260,11 @@ export const usePerkMarketplace = () => {
         },
       });
 
-      console.log('📊 Found', claimedObjects.data.length, 'claimed perk objects using specific filter');
+
 
       // If no results, try querying all objects and filtering (fallback mechanism like main frontend)
       if (claimedObjects.data.length === 0) {
-        console.log('🔄 No results with specific filter, trying fallback method...');
+        // No results with specific filter, trying fallback method
         const allObjects = await suiClient.getOwnedObjects({
           owner: currentAccount.address,
           options: {
@@ -281,7 +279,7 @@ export const usePerkMarketplace = () => {
           return objectType && objectType.includes('ClaimedPerk');
         });
         
-        console.log('📊 Found', claimedPerkObjects.length, 'claimed perk objects using fallback method');
+
         
         claimedObjects = {
           data: claimedPerkObjects,
@@ -300,16 +298,16 @@ export const usePerkMarketplace = () => {
           const perkDefinitionId = fields.perk_definition_id || fields.perkDefinitionId || fields.definition_id;
           
           if (perkDefinitionId) {
-            console.log('🎯 Found claimed perk ID:', perkDefinitionId);
+  
             claimedPerkIds.add(perkDefinitionId);
           }
         }
       });
       
-      console.log('✅ Loaded', claimedPerkIds.size, 'claimed perk IDs:', Array.from(claimedPerkIds));
+
       setClaimedPerks(claimedPerkIds);
     } catch (error) {
-      console.error('❌ Failed to fetch claimed perks:', error);
+      // Failed to fetch claimed perks
       setClaimedPerks(new Set());
     }
   };
@@ -324,12 +322,12 @@ export const usePerkMarketplace = () => {
     } else if (bytesInput instanceof Uint8Array) {
       bytes = bytesInput;
     } else {
-      console.error('Invalid input type for u64 decoding:', typeof bytesInput);
+      // Invalid input type for u64 decoding
       return 0;
     }
 
     if (!bytes || bytes.length !== 8) {
-      console.error(`Invalid byte length for u64: expected 8, got ${bytes?.length}`);
+      // Invalid byte length for u64
       return 0;
     }
     
@@ -340,14 +338,12 @@ export const usePerkMarketplace = () => {
       const valueNumber = Number(valueBigInt);
       
       if (valueBigInt > BigInt(Number.MAX_SAFE_INTEGER)) {
-        console.warn(
-          `Potential precision loss converting u64 value ${valueBigInt} to JavaScript number.`
-        );
+        // Potential precision loss converting u64 value to JavaScript number
       }
       
       return valueNumber;
     } catch (err) {
-      console.error('Error decoding u64 value:', err);
+      // Error decoding u64 value
       return 0;
     }
   };
@@ -360,9 +356,7 @@ export const usePerkMarketplace = () => {
     }
 
     try {
-      console.log('🔍 Fetching Alpha Points balance for:', currentAccount.address);
-      console.log('🔧 Using package:', SUI_CONFIG.packageIds.perkManager);
-      console.log('🔧 Using ledger:', SUI_CONFIG.sharedObjects.ledger);
+      // Fetching Alpha Points balance from blockchain
       
       // Use the simpler integration function
       const { Transaction } = await import('@mysten/sui/transactions');
@@ -385,14 +379,14 @@ export const usePerkMarketplace = () => {
       const status = inspectResult?.effects?.status?.status;
       if (status !== 'success') {
         const errorMsg = inspectResult?.effects?.status?.error || 'Unknown devInspect error';
-        console.error('DevInspect execution failed:', errorMsg, inspectResult);
+        // DevInspect execution failed
         throw new Error(`Failed to fetch points: ${errorMsg}`);
       }
 
-      console.log('📊 DevInspect result:', inspectResult);
+
       
       if (!inspectResult.results || inspectResult.results.length < 1) {
-        console.error('DevInspect results missing or incomplete:', inspectResult);
+        // DevInspect results missing or incomplete
         throw new Error('Could not retrieve point balance: Invalid response structure.');
       }
       
@@ -401,7 +395,7 @@ export const usePerkMarketplace = () => {
         const [bytes, type] = balanceResult.returnValues[0];
         if (type === 'u64' && Array.isArray(bytes)) {
           const totalBalance = decodeU64(bytes);
-          console.log('💰 Found total balance:', totalBalance);
+
           setUserAlphaPoints(totalBalance);
         } else {
           throw new Error(`Unexpected format for balance. Expected type 'u64' and Array bytes.`);
@@ -411,7 +405,7 @@ export const usePerkMarketplace = () => {
       }
       
     } catch (error: any) {
-      console.error('❌ Failed to fetch user Alpha Points:', error);
+      // Failed to fetch user Alpha Points
       setUserAlphaPoints(0);
     }
   };
@@ -425,10 +419,9 @@ export const usePerkMarketplace = () => {
       // Try cache first
       const cachedPerks = getLocalStorageCache();
       if (cachedPerks && cachedPerks.length > 0) {
-        console.log('📦 Using cached perks:', cachedPerks.length);
+        // Using cached perks
         // Apply brand filtering to cached perks
         const filteredPerks = cachedPerks.filter(perk => shouldDisplayPerk(perk, BRAND_CONFIG));
-        console.log('✅ After filtering cached perks:', filteredPerks.length, 'remain');
         setPerks(filteredPerks);
         setIsLoading(false);
         
@@ -442,16 +435,7 @@ export const usePerkMarketplace = () => {
       const allPerks = await fetchMarketplacePerks();
       
       // Apply brand filtering
-      console.log('🎯 Applying brand filtering to', allPerks.length, 'perks');
-      const filteredPerks = allPerks.filter(perk => {
-        const shouldShow = shouldDisplayPerk(perk, BRAND_CONFIG);
-        if (!shouldShow) {
-          console.log('❌ Filtered out perk:', perk.name, perk.id);
-        }
-        return shouldShow;
-      });
-      
-      console.log('✅ After brand filtering:', filteredPerks.length, 'perks remain');
+      const filteredPerks = allPerks.filter(perk => shouldDisplayPerk(perk, BRAND_CONFIG));
       setPerks(filteredPerks);
       setLocalStorageCache(allPerks); // Cache all perks, filter on display
       

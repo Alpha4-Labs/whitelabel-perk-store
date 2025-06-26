@@ -5,6 +5,11 @@ import { Skeleton } from './ui/Skeleton';
 import { BRAND_CONFIG } from '../config/brand';
 import { SUI_CONFIG } from '../config/sui';
 import { toast } from 'react-hot-toast';
+import { Swiper, SwiperSlide } from 'swiper/react';
+import { Navigation, Pagination, Autoplay } from 'swiper/modules';
+import 'swiper/css';
+import 'swiper/css/navigation';
+import 'swiper/css/pagination';
 
 // Types for owned perks
 interface OwnedPerk {
@@ -45,6 +50,209 @@ interface RedemptionResult {
   message: string;
 }
 
+// Mock redemption opportunities - require owning specific perks
+interface RedemptionOpportunity {
+  id: string;
+  title: string;
+  description: string;
+  difficulty: 'Easy' | 'Medium' | 'Hard';
+  icon: string;
+  rewardType: string;
+  rewardDescription: string;
+  requirements: {
+    perkName: string;
+    perkType: string;
+    quantity: number;
+    description: string;
+  }[];
+  estimatedValue: string;
+  timeToRedeem: string;
+}
+
+// ===============================================
+// TEMPLATE REDEMPTION OPPORTUNITIES
+// ===============================================
+// These are examples for deployers to customize for their own redemption portals.
+// Each template shows different object consumption patterns:
+//
+// 1. Single Object → Service Exchange
+// 2. Multiple Same Objects → Upgraded Service  
+// 3. Mixed Object Types → Complex Reward
+// 4. Voucher Bundle → Physical Product
+// 5. High Volume → Exclusive Access
+// 6. Cross-Category → Hybrid Reward
+//
+// DEPLOYER INSTRUCTIONS:
+// - Replace these templates with your own redemption opportunities
+// - Update perkType to match your curated marketplace objects
+// - Customize titles, descriptions, rewards, and requirements
+// - Set realistic estimatedValue and timeToRedeem
+// - Test requirement checking logic with your object types
+//
+// OBJECT CONSUMPTION PATTERNS:
+// - perkType: 'membership_access', 'voucher_code', 'digital_delivery', 'service_booking', 'physical_claim'
+// - quantity: How many objects of this type are required
+// - Requirements are AND logic (all must be met)
+// ===============================================
+
+const TEMPLATE_REDEMPTION_OPPORTUNITIES: RedemptionOpportunity[] = [
+  // TEMPLATE 1: Single Object → Service Exchange
+  {
+    id: 'single-object-service',
+    title: '1-on-1 Strategy Session',
+    description: 'Exchange your consultation perk for a personalized strategy session',
+    difficulty: 'Easy',
+    icon: '💼',
+    rewardType: 'Professional Service',
+    rewardDescription: '60-minute 1-on-1 strategy session with founder + follow-up summary',
+    requirements: [
+      {
+        perkName: 'Strategy Consultation Pass',
+        perkType: 'service_booking',
+        quantity: 1,
+        description: 'Exchange 1 Strategy Consultation Pass'
+      }
+    ],
+    estimatedValue: '$300',
+    timeToRedeem: 'Instant booking'
+  },
+
+  // TEMPLATE 2: Multiple Same Objects → Upgraded Service
+  {
+    id: 'multiple-same-upgrade',
+    title: 'VIP Discord Access',
+    description: 'Combine multiple membership perks for premium community access',
+    difficulty: 'Medium',
+    icon: '🌟',
+    rewardType: 'Enhanced Access',
+    rewardDescription: 'VIP Discord channels + Weekly AMA access + Priority DMs',
+    requirements: [
+      {
+        perkName: 'Community Membership',
+        perkType: 'membership_access',
+        quantity: 3,
+        description: 'Combine 3 Community Membership perks'
+      }
+    ],
+    estimatedValue: '$150',
+    timeToRedeem: '1-2 minutes'
+  },
+
+  // TEMPLATE 3: Mixed Object Types → Complex Reward
+  {
+    id: 'mixed-objects-complex',
+    title: 'Complete Business Package',
+    description: 'Ultimate business growth package requiring diverse perk portfolio',
+    difficulty: 'Hard',
+    icon: '🚀',
+    rewardType: 'Business Package',
+    rewardDescription: 'Brand audit + Website review + 3-month mentorship + Exclusive tools access',
+    requirements: [
+      {
+        perkName: 'Business Consultation',
+        perkType: 'service_booking',
+        quantity: 1,
+        description: 'Business consultation service'
+      },
+      {
+        perkName: 'Premium Tools Access',
+        perkType: 'digital_delivery',
+        quantity: 2,
+        description: '2 different premium tool licenses'
+      },
+      {
+        perkName: 'VIP Membership',
+        perkType: 'membership_access',
+        quantity: 1,
+        description: 'Active VIP membership status'
+      }
+    ],
+    estimatedValue: '$2,500',
+    timeToRedeem: '24-48 hours'
+  },
+
+  // TEMPLATE 4: Voucher Bundle → Physical Product
+  {
+    id: 'voucher-to-physical',
+    title: 'Exclusive Merchandise Bundle',
+    description: 'Convert your discount vouchers into premium branded merchandise',
+    difficulty: 'Medium',
+    icon: '📦',
+    rewardType: 'Physical Bundle',
+    rewardDescription: 'Premium hoodie + Signed book + Exclusive stickers + Limited edition mug',
+    requirements: [
+      {
+        perkName: 'Discount Vouchers',
+        perkType: 'voucher_code',
+        quantity: 5,
+        description: 'Redeem 5 discount voucher codes'
+      }
+    ],
+    estimatedValue: '$200',
+    timeToRedeem: '3-5 business days'
+  },
+
+  // TEMPLATE 5: High Volume → Exclusive Access
+  {
+    id: 'high-volume-exclusive',
+    title: 'Founder\'s Inner Circle',
+    description: 'Elite tier requiring significant perk investment for ultimate access',
+    difficulty: 'Hard',
+    icon: '👑',
+    rewardType: 'Elite Membership',
+    rewardDescription: 'Monthly founder dinners + Private Slack + Equity opportunities + Personal intro network',
+    requirements: [
+      {
+        perkName: 'Any Membership Perks',
+        perkType: 'membership_access',
+        quantity: 10,
+        description: 'Accumulate 10 membership perks of any type'
+      },
+      {
+        perkName: 'Service Experiences',
+        perkType: 'service_booking',
+        quantity: 3,
+        description: 'Complete 3 different service bookings'
+      }
+    ],
+    estimatedValue: '$10,000+',
+    timeToRedeem: 'Manual review (2-7 days)'
+  },
+
+  // TEMPLATE 6: Cross-Category → Hybrid Reward
+  {
+    id: 'cross-category-hybrid',
+    title: 'Creator Economy Accelerator',
+    description: 'Perfect for content creators - combines tools, mentorship, and promotion',
+    difficulty: 'Hard',
+    icon: '🎬',
+    rewardType: 'Creator Package',
+    rewardDescription: 'Video editing tools + Content strategy session + Social media promotion + Revenue optimization',
+    requirements: [
+      {
+        perkName: 'Digital Tools',
+        perkType: 'digital_delivery',
+        quantity: 3,
+        description: '3 different digital tool/software licenses'
+      },
+      {
+        perkName: 'Strategy Session',
+        perkType: 'service_booking',
+        quantity: 1,
+        description: '1 strategy/consultation booking'
+      },
+      {
+        perkName: 'Promotional Credits',
+        perkType: 'voucher_code',
+        quantity: 2,
+        description: '2 promotional/advertising credit vouchers'
+      }
+    ],
+    estimatedValue: '$1,200',
+    timeToRedeem: '1-2 weeks setup'
+  }
+];
+
 export const PerkRedemptionCenter: React.FC = () => {
   const currentAccount = useCurrentAccount();
   const suiClient = useSuiClient();
@@ -55,6 +263,7 @@ export const PerkRedemptionCenter: React.FC = () => {
   const [isRedeeming, setIsRedeeming] = useState(false);
   const [redemptionResult, setRedemptionResult] = useState<RedemptionResult | null>(null);
   const [filterType, setFilterType] = useState<RedemptionType | 'all'>('all');
+  const [activeSlide, setActiveSlide] = useState(0);
 
   // Fetch owned perks on mount and account change
   useEffect(() => {
@@ -69,12 +278,15 @@ export const PerkRedemptionCenter: React.FC = () => {
     setIsLoading(true);
     try {
       console.log('🔍 Fetching owned perks for:', currentAccount.address);
+      console.log('🔧 Using package:', SUI_CONFIG.packageIds.perkManager);
       
-      // Query for ClaimedPerk objects owned by the user
-      const ownedObjects = await suiClient.getOwnedObjects({
+      const packageId = SUI_CONFIG.packageIds.perkManager;
+      
+      // Query for ClaimedPerk objects owned by the user (using same pattern as marketplace)
+      let ownedObjects = await suiClient.getOwnedObjects({
         owner: currentAccount.address,
         filter: {
-          StructType: `${SUI_CONFIG.packageIds.perkManager}::perk_manager::ClaimedPerk`
+          StructType: `${packageId}::perk_manager::ClaimedPerk`
         },
         options: {
           showContent: true,
@@ -82,39 +294,86 @@ export const PerkRedemptionCenter: React.FC = () => {
         },
       });
 
-      console.log('📦 Found', ownedObjects.data.length, 'owned perk objects');
+      console.log('📦 Found', ownedObjects.data.length, 'owned perk objects using specific filter');
+
+      // If no results, try querying all objects and filtering (fallback mechanism like marketplace)
+      if (ownedObjects.data.length === 0) {
+        console.log('🔄 No results with specific filter, trying fallback method...');
+        const allObjects = await suiClient.getOwnedObjects({
+          owner: currentAccount.address,
+          options: {
+            showContent: true,
+            showType: true,
+          },
+        });
+        
+        // Filter for ClaimedPerk objects
+        const claimedPerkObjects = allObjects.data.filter((obj: any) => {
+          const objectType = obj.data?.type;
+          return objectType && objectType.includes('ClaimedPerk');
+        });
+        
+        console.log('📦 Found', claimedPerkObjects.length, 'claimed perk objects using fallback method');
+        
+        ownedObjects = {
+          data: claimedPerkObjects,
+          hasNextPage: false,
+          nextCursor: null
+        };
+      }
 
       const perks: OwnedPerk[] = [];
 
       for (const obj of ownedObjects.data) {
-        if (obj.data?.content && 'fields' in obj.data.content) {
-          const fields = obj.data.content.fields as any;
+        if (obj.data?.content && obj.data.content.dataType === 'moveObject') {
+          const fields = (obj.data.content as any).fields;
           
           try {
+            // Try different possible field names (same as marketplace)
+            const perkDefinitionId = fields.perk_definition_id || fields.perkDefinitionId || fields.definition_id;
+            
+            if (!perkDefinitionId) {
+              console.warn('No perk definition ID found in object:', obj.data.objectId, fields);
+              continue;
+            }
+            
+            console.log('🎯 Processing claimed perk:', obj.data.objectId, 'for definition:', perkDefinitionId);
+            
             // Get the perk definition details
             const perkDefResponse = await suiClient.getObject({
-              id: fields.perk_definition_id,
+              id: perkDefinitionId,
               options: { showContent: true }
             });
 
             if (perkDefResponse.data?.content && 'fields' in perkDefResponse.data.content) {
               const defFields = perkDefResponse.data.content.fields as any;
               
+              // Parse remaining uses properly
+              let remainingUses = null;
+              if (fields.remaining_uses !== undefined && fields.remaining_uses !== null) {
+                remainingUses = typeof fields.remaining_uses === 'number' 
+                  ? fields.remaining_uses 
+                  : parseInt(fields.remaining_uses) || null;
+              }
+              
               const perk: OwnedPerk = {
                 id: obj.data.objectId,
-                perkDefinitionId: fields.perk_definition_id,
+                perkDefinitionId: perkDefinitionId,
                 name: defFields.name || 'Unknown Perk',
                 description: defFields.description || 'No description available',
                 perkType: defFields.perk_type || 'Unknown',
                 icon: '🎁', // Default icon, could be enhanced
                 status: fields.status || 'ACTIVE',
-                remainingUses: fields.remaining_uses || null,
+                remainingUses: remainingUses,
                 claimTimestamp: parseInt(fields.claim_timestamp_ms) || Date.now(),
                 tags: defFields.tags || [],
                 redemptionType: determineRedemptionType(defFields)
               };
               
+              console.log('✅ Successfully processed perk:', perk.name, 'Type:', perk.redemptionType);
               perks.push(perk);
+            } else {
+              console.warn('Failed to get perk definition content for:', perkDefinitionId);
             }
           } catch (error) {
             console.warn('Failed to fetch perk definition for:', fields.perk_definition_id, error);
@@ -123,7 +382,11 @@ export const PerkRedemptionCenter: React.FC = () => {
       }
 
       setOwnedPerks(perks);
-      console.log('✅ Processed', perks.length, 'owned perks');
+      console.log('✅ Processed', perks.length, 'total owned perks');
+      
+      if (perks.length === 0) {
+        console.log('ℹ️ No owned perks found. User may need to purchase perks from the Marketplace tab.');
+      }
       
     } catch (error) {
       console.error('❌ Error fetching owned perks:', error);
@@ -216,6 +479,78 @@ export const PerkRedemptionCenter: React.FC = () => {
       setIsRedeeming(false);
       setSelectedPerk(null);
     }
+  };
+
+  // Handle redemption opportunity
+  const handleRedemptionOpportunity = async (opportunity: RedemptionOpportunity) => {
+    if (!currentAccount?.address) return;
+    
+    // Check if user meets requirements
+    const meetsRequirements = checkRedemptionRequirements(opportunity, ownedPerks);
+    
+    if (!meetsRequirements.canRedeem) {
+      toast.error(`Missing requirements: ${meetsRequirements.missingRequirements.join(', ')}`);
+      return;
+    }
+    
+    setIsRedeeming(true);
+    
+    try {
+      console.log('🏆 Redeeming opportunity:', opportunity.title);
+      
+      // Simulate opportunity redemption (2-5 seconds based on difficulty)
+      const redeemTime = opportunity.difficulty === 'Easy' ? 1000 : 
+                        opportunity.difficulty === 'Medium' ? 3000 : 5000;
+      
+      await new Promise(resolve => setTimeout(resolve, redeemTime));
+      
+      const result: RedemptionResult = {
+        success: true,
+        type: 'membership_access', // Default type for opportunities
+        data: {
+          code: `${opportunity.id.toUpperCase()}-${Math.random().toString(36).substring(2, 8)}`,
+          instructions: `Your ${opportunity.title} has been activated! ${opportunity.rewardDescription}`,
+          expiresAt: Date.now() + (365 * 24 * 60 * 60 * 1000) // 1 year
+        },
+        message: `${opportunity.title} redeemed successfully!`
+      };
+      
+      setRedemptionResult(result);
+      toast.success(`🏆 ${opportunity.title} unlocked!`);
+      
+      // Refresh owned perks
+      setTimeout(() => {
+        fetchOwnedPerks();
+      }, 2000);
+      
+    } catch (error) {
+      console.error('❌ Opportunity redemption failed:', error);
+      toast.error('Redemption failed. Please try again.');
+    } finally {
+      setIsRedeeming(false);
+    }
+  };
+
+  // Check if user meets redemption requirements
+  const checkRedemptionRequirements = (opportunity: RedemptionOpportunity, userPerks: OwnedPerk[]) => {
+    const missingRequirements: string[] = [];
+    
+    for (const requirement of opportunity.requirements) {
+      const matchingPerks = userPerks.filter(perk => 
+        perk.redemptionType === requirement.perkType && 
+        perk.status === 'ACTIVE'
+      );
+      
+      if (matchingPerks.length < requirement.quantity) {
+        const missing = requirement.quantity - matchingPerks.length;
+        missingRequirements.push(`${missing}x ${requirement.perkName}`);
+      }
+    }
+    
+    return {
+      canRedeem: missingRequirements.length === 0,
+      missingRequirements
+    };
   };
 
   // Simulate different redemption patterns (in real implementation, this would interact with your backend)
@@ -341,151 +676,258 @@ export const PerkRedemptionCenter: React.FC = () => {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-bold" style={{ color: 'var(--color-text)' }}>
-            🎁 Perk Redemption Center
-          </h2>
-          <p className="text-sm mt-1" style={{ color: 'var(--color-text-muted)' }}>
-            Redeem your owned perks for codes, content, services, and more
-          </p>
-        </div>
-        
-        <Button onClick={fetchOwnedPerks} variant="outline" size="sm">
-          🔄 Refresh
-        </Button>
+      <div className="text-center">
+        <h2 className="text-3xl font-bold mb-2" style={{ color: 'var(--color-text)' }}>
+          🎁 Perk Redemption Center
+        </h2>
+        <p className="text-lg" style={{ color: 'var(--color-text-muted)' }}>
+          Redeem your owned perks instantly or combine them for exclusive rewards
+        </p>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex flex-wrap gap-2">
-        {(['all', 'voucher_code', 'digital_delivery', 'service_booking', 'membership_access', 'physical_claim'] as const).map((type) => {
-          const isActive = filterType === type;
-          const typeInfo = type === 'all' 
-            ? { icon: '🎁', label: 'All Perks', color: 'text-gray-600' }
-            : getRedemptionTypeInfo(type);
-          
-          return (
-            <button
-              key={type}
-              onClick={() => setFilterType(type)}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
-                isActive 
-                  ? 'shadow-md' 
-                  : 'hover:opacity-80'
-              }`}
-              style={{
-                backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-background-card)',
-                color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)',
+      {/* Two-Column Layout */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+        
+        {/* Left Side: Owned Perks */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-semibold" style={{ color: 'var(--color-text)' }}>
+                🎫 Your Owned Perks
+              </h3>
+              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                Instantly redeem any of your owned perks
+              </p>
+            </div>
+            <Button onClick={fetchOwnedPerks} variant="outline" size="sm">
+              🔄 Refresh
+            </Button>
+          </div>
+
+          {/* Filter Tabs for Owned Perks */}
+          <div className="flex flex-wrap gap-2">
+            {(['all', 'voucher_code', 'digital_delivery', 'service_booking', 'membership_access', 'physical_claim'] as const).map((type) => {
+              const isActive = filterType === type;
+              const typeInfo = type === 'all' 
+                ? { icon: '🎁', label: 'All', color: 'text-gray-600' }
+                : getRedemptionTypeInfo(type);
+              
+              return (
+                <button
+                  key={type}
+                  onClick={() => setFilterType(type)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition-all ${
+                    isActive 
+                      ? 'shadow-md' 
+                      : 'hover:opacity-80'
+                  }`}
+                  style={{
+                    backgroundColor: isActive ? 'var(--color-primary)' : 'var(--color-background-card)',
+                    color: isActive ? 'var(--color-text)' : 'var(--color-text-muted)',
+                    border: '1px solid var(--color-border)'
+                  }}
+                >
+                  {typeInfo.icon} {typeInfo.label}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Owned Perks Stats */}
+          <div className="grid grid-cols-2 gap-3">
+            <div 
+              className="p-3 rounded-lg text-center"
+              style={{ 
+                backgroundColor: 'var(--color-background-card)',
                 border: '1px solid var(--color-border)'
               }}
             >
-              {typeInfo.icon} {typeInfo.label}
-            </button>
-          );
-        })}
-      </div>
+              <div className="text-xl font-bold" style={{ color: 'var(--color-primary)' }}>
+                {ownedPerks.length}
+              </div>
+              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Total Owned
+              </div>
+            </div>
+            
+            <div 
+              className="p-3 rounded-lg text-center"
+              style={{ 
+                backgroundColor: 'var(--color-background-card)',
+                border: '1px solid var(--color-border)'
+              }}
+            >
+              <div className="text-xl font-bold" style={{ color: 'var(--color-success)' }}>
+                {ownedPerks.filter(p => p.status === 'ACTIVE').length}
+              </div>
+              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                Ready to Use
+              </div>
+            </div>
+          </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div 
-          className="p-4 rounded-lg text-center"
-          style={{ 
-            backgroundColor: 'var(--color-background-card)',
-            border: '1px solid var(--color-border)'
-          }}
-        >
-          <div className="text-2xl font-bold" style={{ color: 'var(--color-primary)' }}>
-            {ownedPerks.length}
-          </div>
-          <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Total Perks
-          </div>
+          {/* Owned Perks Grid with Scroll */}
+          {filteredPerks.length === 0 ? (
+            <div 
+              className="text-center py-12 rounded-xl"
+              style={{ 
+                backgroundColor: 'var(--color-background-card)',
+                border: '1px solid var(--color-border)'
+              }}
+            >
+              <div className="text-4xl mb-3">🎁</div>
+              <h4 className="text-lg font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
+                {filterType === 'all' ? 'No Perks Owned' : 'No Perks of This Type'}
+              </h4>
+              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                {filterType === 'all' 
+                  ? 'Visit the Marketplace tab to purchase your first perk!'
+                  : `No ${getRedemptionTypeInfo(filterType as RedemptionType).label.toLowerCase()} perks found.`
+                }
+              </p>
+            </div>
+          ) : (
+            <div 
+              className="space-y-3 max-h-[600px] overflow-y-auto pr-2"
+              style={{
+                scrollbarWidth: 'thin',
+                scrollbarColor: 'var(--color-border) transparent'
+              }}
+            >
+              {/* Show count indicator if more than 5 */}
+              {filteredPerks.length > 5 && (
+                <div 
+                  className="text-xs text-center py-2 rounded-lg"
+                  style={{ 
+                    backgroundColor: 'var(--color-background)',
+                    color: 'var(--color-text-muted)',
+                    border: '1px solid var(--color-border)'
+                  }}
+                >
+                  📜 Showing {filteredPerks.length} perks - scroll to see all
+                </div>
+              )}
+              
+              {filteredPerks.map((perk) => {
+                const typeInfo = getRedemptionTypeInfo(perk.redemptionType);
+                return (
+                  <PerkRedemptionCard
+                    key={perk.id}
+                    perk={perk}
+                    typeInfo={typeInfo}
+                    onRedeem={() => handleRedeemPerk(perk)}
+                    isRedeeming={isRedeeming && selectedPerk?.id === perk.id}
+                  />
+                );
+              })}
+            </div>
+          )}
         </div>
-        
-        <div 
-          className="p-4 rounded-lg text-center"
-          style={{ 
-            backgroundColor: 'var(--color-background-card)',
-            border: '1px solid var(--color-border)'
-          }}
-        >
-          <div className="text-2xl font-bold" style={{ color: 'var(--color-success)' }}>
-            {ownedPerks.filter(p => p.status === 'ACTIVE').length}
-          </div>
-          <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Active
-          </div>
-        </div>
-        
-        <div 
-          className="p-4 rounded-lg text-center"
-          style={{ 
-            backgroundColor: 'var(--color-background-card)',
-            border: '1px solid var(--color-border)'
-          }}
-        >
-          <div className="text-2xl font-bold" style={{ color: 'var(--color-warning)' }}>
-            {ownedPerks.filter(p => p.remainingUses !== null && p.remainingUses > 0).length}
-          </div>
-          <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Multi-Use
-          </div>
-        </div>
-        
-        <div 
-          className="p-4 rounded-lg text-center"
-          style={{ 
-            backgroundColor: 'var(--color-background-card)',
-            border: '1px solid var(--color-border)'
-          }}
-        >
-          <div className="text-2xl font-bold" style={{ color: 'var(--color-text-muted)' }}>
-            {filteredPerks.length}
-          </div>
-          <div className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
-            Filtered
-          </div>
-        </div>
-      </div>
 
-      {/* Perks Grid */}
-      {filteredPerks.length === 0 ? (
-        <div 
-          className="text-center py-16 rounded-xl"
-          style={{ 
-            backgroundColor: 'var(--color-background-card)',
-            border: '1px solid var(--color-border)'
-          }}
-        >
-          <div className="text-6xl mb-4">🎁</div>
-          <h3 className="text-xl font-semibold mb-2" style={{ color: 'var(--color-text)' }}>
-            {filterType === 'all' ? 'No Perks Owned' : 'No Perks of This Type'}
-          </h3>
-          <p className="text-sm mb-6" style={{ color: 'var(--color-text-muted)' }}>
-            {filterType === 'all' 
-              ? 'Visit the Marketplace tab to purchase your first perk!'
-              : `You don't have any ${getRedemptionTypeInfo(filterType as RedemptionType).label.toLowerCase()} perks yet.`
-            }
-          </p>
+        {/* Right Side: Redemption Opportunities */}
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-xl font-semibold mb-1" style={{ color: 'var(--color-text)' }}>
+                🏆 Redemption Opportunities
+              </h3>
+              <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+                Combine your perks for exclusive rewards
+              </p>
+            </div>
+            <div className="flex items-center gap-4">
+              <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                {activeSlide + 1} of {TEMPLATE_REDEMPTION_OPPORTUNITIES.length} templates • Swipe to explore
+              </div>
+              
+              {/* Navigation Arrows positioned under "swipe to explore" text */}
+              <div className="flex items-center gap-2">
+                <button
+                  className="swiper-button-prev-custom w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110"
+                  style={{
+                    backgroundColor: 'var(--color-background-card)',
+                    borderColor: 'var(--color-primary)',
+                    color: 'var(--color-primary)',
+                  }}
+                >
+                  <span className="text-sm">‹</span>
+                </button>
+                <button
+                  className="swiper-button-next-custom w-8 h-8 rounded-full border-2 flex items-center justify-center transition-all duration-200 hover:scale-110"
+                  style={{
+                    backgroundColor: 'var(--color-background-card)',
+                    borderColor: 'var(--color-primary)',
+                    color: 'var(--color-primary)',
+                  }}
+                >
+                  <span className="text-sm">›</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Redemption Opportunities Swiper */}
+          <div className="redemption-swiper-container">
+            <style>{`
+              .redemption-opportunities-swiper .swiper-pagination {
+                bottom: 8px !important;
+              }
+              .redemption-opportunities-swiper .swiper-pagination-bullet {
+                opacity: 0.5;
+                transition: all 0.3s ease;
+              }
+              .redemption-opportunities-swiper .swiper-pagination-bullet-active {
+                opacity: 1;
+                transform: scale(1.2);
+              }
+              .redemption-opportunities-swiper .swiper-button-prev,
+              .redemption-opportunities-swiper .swiper-button-next {
+                display: none;
+              }
+            `}</style>
+            <Swiper
+              modules={[Navigation, Pagination, Autoplay]}
+              spaceBetween={20}
+              slidesPerView={1}
+              navigation={{
+                nextEl: '.swiper-button-next-custom',
+                prevEl: '.swiper-button-prev-custom',
+              }}
+              pagination={{
+                clickable: true,
+                dynamicBullets: true,
+              }}
+              autoplay={{
+                delay: 8000,
+                disableOnInteraction: false,
+                pauseOnMouseEnter: true,
+              }}
+              loop={TEMPLATE_REDEMPTION_OPPORTUNITIES.length > 1}
+              onSlideChange={(swiper) => setActiveSlide(swiper.realIndex)}
+              className="redemption-opportunities-swiper"
+              style={{ 
+                paddingBottom: '40px',
+                '--swiper-navigation-color': 'var(--color-primary)',
+                '--swiper-pagination-color': 'var(--color-primary)',
+                '--swiper-pagination-bullet-inactive-color': 'var(--color-border)',
+              } as React.CSSProperties}
+            >
+              {TEMPLATE_REDEMPTION_OPPORTUNITIES.map((opportunity) => (
+                <SwiperSlide key={opportunity.id}>
+                  <RedemptionOpportunityCard
+                    opportunity={opportunity}
+                    ownedPerks={ownedPerks}
+                    onRedeem={() => handleRedemptionOpportunity(opportunity)}
+                  />
+                </SwiperSlide>
+              ))}
+            </Swiper>
+          </div>
         </div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredPerks.map((perk) => {
-            const typeInfo = getRedemptionTypeInfo(perk.redemptionType);
-            return (
-              <PerkRedemptionCard
-                key={perk.id}
-                perk={perk}
-                typeInfo={typeInfo}
-                onRedeem={() => handleRedeemPerk(perk)}
-                isRedeeming={isRedeeming && selectedPerk?.id === perk.id}
-              />
-            );
-          })}
-        </div>
-      )}
+
+      </div>
 
       {/* Redemption Result Modal */}
       {redemptionResult && (
@@ -516,61 +958,64 @@ const PerkRedemptionCard: React.FC<PerkRedemptionCardProps> = ({
   
   return (
     <div 
-      className="p-6 rounded-xl border transition-all duration-200 hover:shadow-lg"
+      className="p-4 rounded-lg border transition-all duration-200 hover:shadow-md"
       style={{ 
         backgroundColor: 'var(--color-background-card)',
-        borderColor: 'var(--color-border)'
+        borderColor: canRedeem ? 'var(--color-primary)' : 'var(--color-border)',
+        borderWidth: canRedeem ? '2px' : '1px'
       }}
     >
-      {/* Header */}
-      <div className="flex items-start justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <div className="text-2xl">{perk.icon}</div>
-          <div>
-            <h3 className="font-semibold text-sm" style={{ color: 'var(--color-text)' }}>
+      {/* Compact Header */}
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-3 flex-1 min-w-0">
+          <div className="text-lg">{perk.icon}</div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-semibold text-sm truncate" style={{ color: 'var(--color-text)' }}>
               {perk.name}
             </h3>
-            <div className={`text-xs ${typeInfo.color} flex items-center gap-1`}>
-              {typeInfo.icon} {typeInfo.label}
+            <div className="flex items-center gap-2 mt-1">
+              <span 
+                className="text-xs px-2 py-1 rounded-full"
+                style={{ 
+                  backgroundColor: 'var(--color-background)',
+                  color: 'var(--color-text-muted)',
+                  border: '1px solid var(--color-border)'
+                }}
+              >
+                {typeInfo.icon} {typeInfo.label}
+              </span>
+              {perk.status === 'ACTIVE' && (
+                <span 
+                  className="text-xs px-2 py-1 rounded-full"
+                  style={{
+                    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                    color: '#059669',
+                    border: '1px solid rgba(16, 185, 129, 0.3)'
+                  }}
+                >
+                  Ready
+                </span>
+              )}
             </div>
           </div>
         </div>
         
-        <div className="text-right">
-          <div className={`text-xs px-2 py-1 rounded-full ${
-            perk.status === 'ACTIVE' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-          }`}>
-            {perk.status}
+        {perk.remainingUses !== null && (
+          <div className="text-right ml-2">
+            <div className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>
+              {perk.remainingUses}
+            </div>
+            <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+              uses
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Description */}
-      <p className="text-sm mb-4 line-clamp-2" style={{ color: 'var(--color-text-muted)' }}>
+      {/* Compact Description */}
+      <p className="text-xs mb-3 line-clamp-1" style={{ color: 'var(--color-text-muted)' }}>
         {perk.description}
       </p>
-
-      {/* Usage Info */}
-      {perk.remainingUses !== null && (
-        <div className="mb-4">
-          <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
-            <span>Remaining Uses</span>
-            <span>{perk.remainingUses}</span>
-          </div>
-          <div 
-            className="h-2 rounded-full"
-            style={{ backgroundColor: 'var(--color-border)' }}
-          >
-            <div 
-              className="h-2 rounded-full transition-all duration-300"
-              style={{ 
-                backgroundColor: 'var(--color-primary)',
-                width: `${Math.max(10, (perk.remainingUses / 10) * 100)}%`
-              }}
-            />
-          </div>
-        </div>
-      )}
 
       {/* Action Button */}
       <Button
@@ -593,6 +1038,204 @@ const PerkRedemptionCard: React.FC<PerkRedemptionCardProps> = ({
 };
 
 // Redemption result modal component
+// Redemption opportunity card component
+interface RedemptionOpportunityCardProps {
+  opportunity: RedemptionOpportunity;
+  ownedPerks: OwnedPerk[];
+  onRedeem: () => void;
+}
+
+const RedemptionOpportunityCard: React.FC<RedemptionOpportunityCardProps> = ({
+  opportunity,
+  ownedPerks,
+  onRedeem
+}) => {
+  const requirementCheck = useMemo(() => {
+    const missingRequirements: string[] = [];
+    let totalRequired = 0;
+    let totalOwned = 0;
+    
+    for (const requirement of opportunity.requirements) {
+      const matchingPerks = ownedPerks.filter(perk => 
+        perk.redemptionType === requirement.perkType && 
+        perk.status === 'ACTIVE'
+      );
+      
+      totalRequired += requirement.quantity;
+      totalOwned += Math.min(matchingPerks.length, requirement.quantity);
+      
+      if (matchingPerks.length < requirement.quantity) {
+        const missing = requirement.quantity - matchingPerks.length;
+        missingRequirements.push(`${missing}x ${requirement.perkName}`);
+      }
+    }
+    
+    return {
+      canRedeem: missingRequirements.length === 0,
+      missingRequirements,
+      completionPercent: Math.round((totalOwned / totalRequired) * 100)
+    };
+  }, [opportunity.requirements, ownedPerks]);
+
+  const getDifficultyColor = (difficulty: string) => {
+    switch (difficulty) {
+      case 'Easy': return '#10B981'; // green
+      case 'Medium': return '#F59E0B'; // amber
+      case 'Hard': return '#EF4444'; // red
+      default: return '#6B7280'; // gray
+    }
+  };
+
+  return (
+    <div 
+      className="p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-lg h-full flex flex-col"
+      style={{ 
+        backgroundColor: 'var(--color-background-card)',
+        borderColor: requirementCheck.canRedeem ? '#10B981' : 'var(--color-border)',
+        minHeight: '450px'
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-start justify-between mb-4">
+        <div className="flex items-center space-x-3">
+          <div className="text-xl">{opportunity.icon}</div>
+          <div>
+            <div className="flex items-center space-x-2 mb-1">
+              <h4 className="font-semibold" style={{ color: 'var(--color-text)' }}>
+                {opportunity.title}
+              </h4>
+              <span 
+                className="px-2 py-1 rounded-full text-xs font-medium text-white"
+                style={{ backgroundColor: getDifficultyColor(opportunity.difficulty) }}
+              >
+                {opportunity.difficulty}
+              </span>
+            </div>
+            <p className="text-sm" style={{ color: 'var(--color-text-muted)' }}>
+              {opportunity.description}
+            </p>
+          </div>
+        </div>
+        
+        <div className="text-right">
+          <div className="text-sm font-medium" style={{ color: 'var(--color-primary)' }}>
+            {opportunity.estimatedValue}
+          </div>
+          <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+            {opportunity.timeToRedeem}
+          </div>
+        </div>
+      </div>
+
+      {/* Requirements */}
+      <div className="space-y-2 mb-4">
+        <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+          Requirements:
+        </div>
+        
+        {opportunity.requirements.map((req, index) => {
+          const matchingPerks = ownedPerks.filter(perk => 
+            perk.redemptionType === req.perkType && 
+            perk.status === 'ACTIVE'
+          );
+          const owned = matchingPerks.length;
+          const needed = req.quantity;
+          const isMet = owned >= needed;
+          
+          return (
+            <div 
+              key={index}
+              className="flex items-center justify-between p-3 rounded-lg border transition-all duration-200"
+              style={{ 
+                backgroundColor: isMet 
+                  ? 'rgba(16, 185, 129, 0.1)' 
+                  : 'rgba(239, 68, 68, 0.1)',
+                borderColor: isMet ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'
+              }}
+            >
+              <div className="flex-1">
+                <div className="flex items-center space-x-2 mb-1">
+                  <span className="text-sm">{isMet ? '✅' : '❌'}</span>
+                  <div className="text-sm font-medium" style={{ color: 'var(--color-text)' }}>
+                    {req.perkName}
+                  </div>
+                </div>
+                <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+                  {req.description}
+                </div>
+              </div>
+              
+              <div 
+                className="text-sm font-bold px-2 py-1 rounded-lg ml-3"
+                style={{ 
+                  backgroundColor: isMet 
+                    ? 'rgba(16, 185, 129, 0.2)' 
+                    : 'rgba(239, 68, 68, 0.2)',
+                  color: isMet ? '#059669' : '#DC2626'
+                }}
+              >
+                {owned}/{needed}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Progress Bar */}
+      <div className="mb-4">
+        <div className="flex justify-between text-xs mb-1" style={{ color: 'var(--color-text-muted)' }}>
+          <span>Progress</span>
+          <span>{requirementCheck.completionPercent}%</span>
+        </div>
+        <div 
+          className="w-full rounded-full h-2"
+          style={{ backgroundColor: 'var(--color-border)' }}
+        >
+          <div 
+            className="h-2 rounded-full transition-all duration-300"
+            style={{ 
+              width: `${requirementCheck.completionPercent}%`,
+              backgroundColor: requirementCheck.canRedeem ? '#10B981' : '#F59E0B'
+            }}
+          />
+        </div>
+      </div>
+
+      {/* Reward Preview */}
+      <div 
+        className="p-3 rounded-lg mb-4 flex-grow"
+        style={{ 
+          backgroundColor: 'var(--color-background)',
+          border: '1px solid var(--color-border)'
+        }}
+      >
+        <div className="text-sm font-medium mb-1" style={{ color: 'var(--color-text)' }}>
+          🎁 {opportunity.rewardType}
+        </div>
+        <div className="text-xs" style={{ color: 'var(--color-text-muted)' }}>
+          {opportunity.rewardDescription}
+        </div>
+      </div>
+
+      {/* Action Button - Always at bottom */}
+      <div className="mt-auto">
+        <Button
+          onClick={onRedeem}
+          disabled={!requirementCheck.canRedeem}
+          variant={requirementCheck.canRedeem ? "default" : "outline"}
+          size="sm"
+          className="w-full"
+        >
+          {requirementCheck.canRedeem 
+            ? `🏆 Redeem ${opportunity.title}` 
+            : `Missing: ${requirementCheck.missingRequirements.join(', ')}`
+          }
+        </Button>
+      </div>
+    </div>
+  );
+};
+
 interface RedemptionResultModalProps {
   result: RedemptionResult;
   onClose: () => void;
